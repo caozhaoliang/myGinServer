@@ -6,18 +6,11 @@ WORKDIR /app
 
 # 安装必要的工具
 RUN apk add --no-cache git
-
-# 复制依赖文件
-COPY go.mod go.sum ./
-
-# 下载依赖
-RUN go mod download
-
 # 复制源代码
 COPY . .
 
 # 构建应用
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
+RUN CGO_ENABLED=0 GOOS=linux go build -mod=vendor -a -installsuffix cgo -o main .
 
 # 最终阶段
 FROM alpine:latest
