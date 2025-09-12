@@ -2,6 +2,7 @@ package controller
 
 import (
 	"myGinServer/internal/store"
+	"myGinServer/internal/task"
 	user2 "myGinServer/internal/user"
 	"myGinServer/service/userserver"
 	"net/http"
@@ -64,7 +65,6 @@ func (u *UserController) Tasks(c *gin.Context) {
 }
 
 func (u *UserController) DelTask(c *gin.Context) {
-
 	var err error
 	idParam := c.Param("id")
 	if len(idParam) == 0 {
@@ -78,4 +78,18 @@ func (u *UserController) DelTask(c *gin.Context) {
 		return
 	}
 	SendSuccess(c, nil)
+}
+
+func (u *UserController) SaveTask(c *gin.Context) {
+	var taskReq task.Task
+	if err := c.ShouldBindJSON(&taskReq); err != nil {
+		SendError(c, http.StatusBadRequest, err)
+		return
+	}
+	id, err := u.tasksServer.TaskSave(c, taskReq)
+	if err != nil {
+		SendError(c, http.StatusInternalServerError, err)
+		return
+	}
+	SendSuccess(c, id)
 }

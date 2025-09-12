@@ -9,6 +9,7 @@ import (
 	user2 "myGinServer/internal/user"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/bcrypt"
@@ -25,6 +26,7 @@ type DBStore interface {
 
 	ListTasks(ctx context.Context, keyword string) ([]task.Task, error)
 	DelTasks(ctx context.Context, id string) error
+	SaveTask(ctx context.Context, task task.Task) (string, error)
 }
 
 func NewDatabase(config *config.DBConfig) (DBStore, error) {
@@ -96,4 +98,14 @@ func (s *DbStore) ListTasks(ctx context.Context, keyword string) ([]task.Task, e
 func (s *DbStore) DelTasks(ctx context.Context, id string) error {
 	_, err := s.db.ExecContext(ctx, `DELETE FROM tasks WHERE id = ?`, id)
 	return err
+}
+
+func (s *DbStore) SaveTask(ctx context.Context, task task.Task) (string, error) {
+	execSQL := `insert into tasks(id, name, des, completed) values (?,?,?,?)`
+	if len(task.Id) == 0 {
+		newUUID, _ := uuid.NewUUID()
+		task.Id = newUUID.String()
+	}
+	_, err := s.db.ExecContext(ctx, execSQL, task.Id, task.Name, task.Des, task.Completed)
+	return task.Id, err
 }
