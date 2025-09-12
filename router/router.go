@@ -70,6 +70,7 @@ func NewRouter(controller *controller.UserController, db store.DBStore) *Router 
 	r.POST("/register", controller.Register)
 	r.GET("/api/task/list", controller.Tasks)
 	r.DELETE("/api/task/del/:id", controller.DelTask)
+	r.POST("/api/task/add", controller.SaveTask)
 
 	jwtMiddleware, err := tool.NewJwtAuthMiddleware(db)
 	if err != nil {
