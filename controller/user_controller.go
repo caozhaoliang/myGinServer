@@ -1,20 +1,26 @@
 package controller
 
 import (
+	"myGinServer/internal/store"
 	user2 "myGinServer/internal/user"
 	"myGinServer/service/userserver"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/pkg/errors"
 )
 
 type UserController struct {
-	userServer *userserver.UserServer
+	userServer  *userserver.UserServer
+	tasksServer *userserver.TasksServer
 }
 
-func NewUserController(userServer *userserver.UserServer) *UserController {
+func NewUserController(db store.DBStore) *UserController {
+	tasksServer := userserver.NewTasksServer(db)
+	userServer := userserver.NewUserServer(db)
 	return &UserController{
-		userServer: userServer,
+		tasksServer: tasksServer,
+		userServer:  userServer,
 	}
 }
 
@@ -45,4 +51,31 @@ func (u *UserController) Register(c *gin.Context) {
 	}
 
 	SendSuccess(c, userId)
+}
+
+func (u *UserController) Tasks(c *gin.Context) {
+	keyword, _ := c.GetQuery("keyword")
+	tasks, err := u.tasksServer.TaskList(c, keyword)
+	if err != nil {
+		SendError(c, http.StatusInternalServerError, err)
+		return
+	}
+	SendSuccess(c, tasks)
+}
+
+func (u *UserController) DelTask(c *gin.Context) {
+
+	var err error
+	idParam := c.Param("id")
+	if len(idParam) == 0 {
+		SendError(c, http.StatusBadRequest, errors.New("ID为空"))
+		return
+	}
+
+	err = u.tasksServer.TaskDel(c, idParam)
+	if err != nil {
+		SendError(c, http.StatusInternalServerError, err)
+		return
+	}
+	SendSuccess(c, nil)
 }

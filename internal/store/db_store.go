@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"myGinServer/config"
+	"myGinServer/internal/task"
 	user2 "myGinServer/internal/user"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -21,6 +22,9 @@ type DBStore interface {
 	CheckUserInfo(ctx context.Context, username, password string) (user2.User, error)
 	IsExistsUserNameEmail(ctx context.Context, username, email string) (bool, error)
 	SaveUser(ctx context.Context, user user2.User) error
+
+	ListTasks(ctx context.Context, keyword string) ([]task.Task, error)
+	DelTasks(ctx context.Context, id string) error
 }
 
 func NewDatabase(config *config.DBConfig) (DBStore, error) {
@@ -73,5 +77,23 @@ func (s *DbStore) CheckUserInfo(ctx context.Context, username, password string) 
 func (s *DbStore) SaveUser(ctx context.Context, user user2.User) error {
 	sqlText := `INSERT INTO users(user_id, username, email, password_hash, status) VALUES(?, ?, ?, ?, ?)`
 	_, err := s.db.ExecContext(ctx, sqlText, user.UserId, user.Username, user.Email, user.PasswordHash, user.Status)
+	return err
+}
+
+func (s *DbStore) ListTasks(ctx context.Context, keyword string) ([]task.Task, error) {
+	var tasks []task.Task
+	arg := []interface{}{}
+	query := `SELECT id, name, des FROM tasks`
+	if keyword != "" {
+		arg = append(arg, keyword)
+		query += ` WHERE name LIKE concat('%', ?, '%')`
+	}
+
+	err := s.db.SelectContext(ctx, &tasks, query, arg...)
+	return tasks, err
+}
+
+func (s *DbStore) DelTasks(ctx context.Context, id string) error {
+	_, err := s.db.ExecContext(ctx, `DELETE FROM tasks WHERE id = ?`, id)
 	return err
 }

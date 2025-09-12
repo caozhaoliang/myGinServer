@@ -15,7 +15,7 @@ import (
 )
 
 type Router struct {
-	g *gin.Engine
+	r *gin.Engine
 }
 
 func RecoveryWithLogger(logger *logrus.Logger) gin.HandlerFunc {
@@ -37,17 +37,39 @@ func RecoveryWithLogger(logger *logrus.Logger) gin.HandlerFunc {
 		c.Next()
 	}
 }
-func NewRouter(controller *controller.UserController, db store.DBStore) *Router {
-	route := &Router{
-		g: gin.New(),
+func Cors() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// 允许所有来源（生产环境建议指定具体域名）
+		c.Header("Access-Control-Allow-Origin", "*")
+		// 允许的请求头
+		c.Header("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+		// 允许的请求方法
+		c.Header("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, PATCH, DELETE")
+		// 允许前端获取的头信息
+		c.Header("Access-Control-Expose-Headers", "Content-Length, Access-Control-Allow-Origin, Access-Control-Allow-Headers, Content-Type")
+		// 是否允许后续请求携带认证信息（cookies）
+		c.Header("Access-Control-Allow-Credentials", "true")
+
+		// 处理预检请求（OPTIONS方法）
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+
+		c.Next()
 	}
+}
+func NewRouter(controller *controller.UserController, db store.DBStore) *Router {
+	route := &Router{}
 	r := gin.Default()
 
 	r.Use(gzip.Gzip(gzip.DefaultCompression))
 	pprof.Register(r)
 	logger := tool.InitLogger()
-	r.Use(RecoveryWithLogger(logger), gin.Logger())
+	r.Use(RecoveryWithLogger(logger), gin.Logger()).Use(Cors())
 	r.POST("/register", controller.Register)
+	r.GET("/api/task/list", controller.Tasks)
+	r.DELETE("/api/task/del/:id", controller.DelTask)
 
 	jwtMiddleware, err := tool.NewJwtAuthMiddleware(db)
 	if err != nil {
@@ -61,9 +83,10 @@ func NewRouter(controller *controller.UserController, db store.DBStore) *Router 
 
 	authed := r.Group("/auth")
 	authed.POST("/login", jwtMiddleware.Middleware.LoginHandler)
+	route.r = r
 	return route
 }
 
 func (r *Router) Start(address string) error {
-	return r.g.Run(address)
+	return r.r.Run(address)
 }

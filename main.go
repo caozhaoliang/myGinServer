@@ -5,7 +5,6 @@ import (
 	"myGinServer/controller"
 	"myGinServer/internal/store"
 	"myGinServer/router"
-	"myGinServer/service/userserver"
 )
 
 const (
@@ -19,9 +18,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	userServer := userserver.NewUserServer(db)
 
-	userController := controller.NewUserController(userServer)
+	userController := controller.NewUserController(db)
 
 	r := router.NewRouter(userController, db)
 
@@ -31,7 +29,7 @@ func main() {
 		}()
 	}
 
-	err = r.Start(":8080")
+	err = r.Start(":8081")
 	if err != nil {
 		panic(err)
 	}
