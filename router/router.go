@@ -68,9 +68,6 @@ func NewRouter(controller *controller.UserController, db store.DBStore) *Router 
 	logger := tool.InitLogger()
 	r.Use(RecoveryWithLogger(logger), gin.Logger()).Use(Cors())
 	r.POST("/register", controller.Register)
-	r.GET("/api/task/list", controller.Tasks)
-	r.DELETE("/api/task/del/:id", controller.DelTask)
-	r.POST("/api/task/add", controller.SaveTask)
 
 	jwtMiddleware, err := tool.NewJwtAuthMiddleware(db)
 	if err != nil {
@@ -84,6 +81,12 @@ func NewRouter(controller *controller.UserController, db store.DBStore) *Router 
 
 	authed := r.Group("/auth")
 	authed.POST("/login", jwtMiddleware.Middleware.LoginHandler)
+	authed.Use(jwtMiddleware.Middleware.MiddlewareFunc())
+	{
+		authed.GET("/api/task/list", controller.Tasks)
+		authed.DELETE("/api/task/del/:id", controller.DelTask)
+		authed.POST("/api/task/add", controller.SaveTask)
+	}
 	route.r = r
 	return route
 }
