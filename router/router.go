@@ -79,13 +79,12 @@ func NewRouter(controller *controller.UserController, db store.DBStore) *Router 
 		})
 	})
 
-	authed := r.Group("/auth")
-	authed.POST("/login", jwtMiddleware.Middleware.LoginHandler)
-	authed.Use(jwtMiddleware.Middleware.MiddlewareFunc())
+	r.POST("/auth/login", jwtMiddleware.Middleware.LoginHandler)
+	api := r.Group("/api", jwtMiddleware.Middleware.MiddlewareFunc())
 	{
-		authed.GET("/api/task/list", controller.Tasks)
-		authed.DELETE("/api/task/del/:id", controller.DelTask)
-		authed.POST("/api/task/add", controller.SaveTask)
+		api.GET("/task/list", controller.Tasks)
+		api.DELETE("/task/del/:id", controller.DelTask)
+		api.POST("/task/add", controller.SaveTask)
 	}
 	route.r = r
 	return route

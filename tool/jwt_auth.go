@@ -37,7 +37,7 @@ func NewJwtAuthMiddleware(db store.DBStore) (*JwtAuthMiddleware, error) {
 		MaxRefresh:  time.Hour,
 		IdentityKey: jwtIdentityKey,
 		PayloadFunc: func(data interface{}) jwt.MapClaims {
-			if v, ok := data.(*user2.User); ok {
+			if v, ok := data.(user2.User); ok {
 				return jwt.MapClaims{
 					jwtIdentityKey: v.UserId,
 					jwtNameKey:     v.Username,
@@ -63,12 +63,10 @@ func NewJwtAuthMiddleware(db store.DBStore) (*JwtAuthMiddleware, error) {
 			}
 			return userInfo, nil
 		},
-		//Authorizator: func(data interface{}, c *gin.Context) bool {
-		//	if v, ok := data.(*CustomClaims); ok && v.UserID == "admin" {
-		//		return true
-		//	}
-		//	return false
-		//},
+		Authorizator: func(data interface{}, c *gin.Context) bool {
+			// todo 这里可以根据data中的信息做一些更加细粒度的权限资源校验
+			return true
+		},
 		Unauthorized: func(c *gin.Context, code int, message string) {
 			c.JSON(code, gin.H{
 				"code":    code,
