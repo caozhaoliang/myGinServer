@@ -78,7 +78,7 @@ func NewRouter(controller *controller.UserController, db store.DBStore) *Router 
 			"message": "hello world",
 		})
 	})
-
+	r.GET("/callback", jwtMiddleware.CallbackHandler)
 	r.POST("/auth/login", jwtMiddleware.Middleware.LoginHandler)
 	api := r.Group("/api", jwtMiddleware.Middleware.MiddlewareFunc())
 	{

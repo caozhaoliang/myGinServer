@@ -1,6 +1,6 @@
 module myGinServer
 
-go 1.23.0
+go 1.24.0
 
 toolchain go1.24.7
 
@@ -17,6 +17,7 @@ require (
 	github.com/prometheus/client_golang v1.23.2
 	github.com/sirupsen/logrus v1.9.3
 	golang.org/x/crypto v0.41.0
+	golang.org/x/oauth2 v0.31.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 

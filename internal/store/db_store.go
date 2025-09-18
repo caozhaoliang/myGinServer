@@ -23,6 +23,7 @@ type DBStore interface {
 	CheckUserInfo(ctx context.Context, username, password string) (user2.User, error)
 	IsExistsUserNameEmail(ctx context.Context, username, email string) (bool, error)
 	SaveUser(ctx context.Context, user user2.User) error
+	GetUserByName(ctx context.Context, username string) (user user2.User, err error)
 
 	ListTasks(ctx context.Context, keyword string) ([]task.Task, error)
 	DelTasks(ctx context.Context, id string) error
@@ -49,6 +50,15 @@ func (s *DbStore) IsExistsUserNameEmail(ctx context.Context, username, email str
 		return false, err
 	}
 	return usernameExists != "" || emailExists != "", nil
+}
+
+func (s *DbStore) GetUserByName(ctx context.Context, username string) (user user2.User, err error) {
+	sqlText := `select id, username, email,status from users where username=?`
+	err = s.db.SelectContext(ctx, &user, sqlText, username)
+	if errors.Is(err, sql.ErrNoRows) {
+		return user2.User{}, nil
+	}
+	return user, err
 }
 
 func (s *DbStore) CheckUserInfo(ctx context.Context, username, password string) (user2.User, error) {

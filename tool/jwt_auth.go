@@ -1,18 +1,21 @@
 package tool
 
 import (
+	"myGinServer/controller"
 	"myGinServer/internal/store"
 	user2 "myGinServer/internal/user"
 	"time"
 
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 var jwtKey = []byte("928df7424055d5be39c5a455969de75f563f53a33a842cf6bc995a2fffa22062")
 
 type JwtAuthMiddleware struct {
 	Middleware *jwt.GinJWTMiddleware
+	db         store.DBStore
 }
 
 const (
@@ -82,6 +85,40 @@ func NewJwtAuthMiddleware(db store.DBStore) (*JwtAuthMiddleware, error) {
 	})
 
 	return &JwtAuthMiddleware{
+		db:         db,
 		Middleware: authMiddleware,
 	}, err
+}
+
+func (j *JwtAuthMiddleware) CallbackHandler(c *gin.Context) {
+	fnHandler := func(userName, email string) {
+		var err error
+		userId := uuid.New().String()
+		u := user2.User{UserId: userId, Email: email, Username: userName}
+		defer func() {
+			if err != nil {
+				controller.SendError(c, 500, err)
+			}
+		}()
+		userInfo, err := j.db.GetUserByName(c, userName)
+		if err != nil {
+			return
+		}
+		if len(userInfo.UserId) == 0 {
+			// 用户不存在，保存用户
+			err = j.db.SaveUser(c, u)
+			if err != nil {
+				return
+			}
+		} else {
+			u.UserId = userInfo.UserId
+		}
+		// 保存用户完成，开始生成token
+		token, _, err := j.Middleware.TokenGenerator(&u)
+		if err != nil {
+			return
+		}
+		controller.SendSuccess(c, token)
+	}
+	CallbackCheck(c, fnHandler)
 }
