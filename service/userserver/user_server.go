@@ -67,3 +67,11 @@ func (u *UserServer) Register(user *user2.User) (userId string, err error) {
 
 	return userVO.UserId, nil
 }
+
+func (u *UserServer) Profile(ctx context.Context, userId string) (*user2.User, error) {
+	user, err := u.dbStore.GetUser(ctx, userId)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}

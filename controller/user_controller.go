@@ -54,6 +54,20 @@ func (u *UserController) Register(c *gin.Context) {
 	SendSuccess(c, userId)
 }
 
+func (u *UserController) Profile(c *gin.Context) {
+	user, exists := c.Get("id")
+	if !exists {
+		SendError(c, http.StatusInternalServerError, errors.New("用户不存在"))
+		return
+	}
+	userInfo, err := u.userServer.Profile(c, user.(*user2.User).UserId)
+	if err != nil {
+		SendError(c, http.StatusInternalServerError, err)
+		return
+	}
+	SendSuccess(c, userInfo)
+}
+
 func (u *UserController) Tasks(c *gin.Context) {
 	keyword, _ := c.GetQuery("keyword")
 	tasks, err := u.tasksServer.TaskList(c, keyword)

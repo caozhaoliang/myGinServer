@@ -82,6 +82,7 @@ func NewRouter(controller *controller.UserController, db store.DBStore) *Router 
 	r.POST("/auth/login", jwtMiddleware.Middleware.LoginHandler)
 	api := r.Group("/api", jwtMiddleware.Middleware.MiddlewareFunc())
 	{
+		api.GET("/user/profile", controller.Profile)
 		api.GET("/task/list", controller.Tasks)
 		api.DELETE("/task/del/:id", controller.DelTask)
 		api.POST("/task/add", controller.SaveTask)

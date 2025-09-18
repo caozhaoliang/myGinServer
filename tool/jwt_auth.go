@@ -19,7 +19,7 @@ type JwtAuthMiddleware struct {
 }
 
 const (
-	jwtIdentityKey = "id"
+	JwtIdentityKey = "id"
 	jwtNameKey     = "username"
 	RootUser       = "admin"
 	RootPassword   = "bigdata@2019!"
@@ -38,11 +38,11 @@ func NewJwtAuthMiddleware(db store.DBStore) (*JwtAuthMiddleware, error) {
 		Key:         jwtKey,
 		Timeout:     time.Hour,
 		MaxRefresh:  time.Hour,
-		IdentityKey: jwtIdentityKey,
+		IdentityKey: JwtIdentityKey,
 		PayloadFunc: func(data interface{}) jwt.MapClaims {
 			if v, ok := data.(user2.User); ok {
 				return jwt.MapClaims{
-					jwtIdentityKey: v.UserId,
+					JwtIdentityKey: v.UserId,
 					jwtNameKey:     v.Username,
 				}
 			}
@@ -51,7 +51,7 @@ func NewJwtAuthMiddleware(db store.DBStore) (*JwtAuthMiddleware, error) {
 		IdentityHandler: func(c *gin.Context) interface{} {
 			claims := jwt.ExtractClaims(c)
 			return &user2.User{
-				UserId:   claims[jwtIdentityKey].(string),
+				UserId:   claims[JwtIdentityKey].(string),
 				Username: claims[jwtNameKey].(string),
 			}
 		},
