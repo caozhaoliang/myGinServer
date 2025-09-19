@@ -19,3 +19,7 @@ func NewArticleServer(db store.DBStore) *ArticleServer {
 func (a *ArticleServer) Channels(ctx context.Context) ([]article.Channel, error) {
 	return a.dbStore.Channels(ctx)
 }
+
+func (a *ArticleServer) Articles(ctx context.Context, req *article.ArticlesRequest) (article.ArticlesResponse, error) {
+	return a.dbStore.GetArticles(ctx, req)
+}

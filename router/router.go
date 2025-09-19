@@ -88,6 +88,7 @@ func NewRouter(controller *controller.UserController, db store.DBStore) *Router 
 		api.POST("/task/add", controller.SaveTask)
 
 		api.GET("/channels", controller.Channels)
+		api.GET("/articles", controller.Articles)
 	}
 	route.r = r
 	return route

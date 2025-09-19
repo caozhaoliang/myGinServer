@@ -2,6 +2,7 @@ package controller
 
 import (
 	"myGinServer/internal/store"
+	"myGinServer/models/article"
 	"myGinServer/models/task"
 	user2 "myGinServer/models/user"
 	"myGinServer/service"
@@ -119,4 +120,15 @@ func (u *UserController) Channels(c *gin.Context) {
 		return
 	}
 	SendSuccess(c, channels)
+}
+
+func (u *UserController) Articles(c *gin.Context) {
+	var req article.ArticlesRequest
+	err := c.ShouldBindQuery(&req)
+	if err != nil {
+		SendError(c, http.StatusBadRequest, err)
+		return
+	}
+	articles, err := u.articleServer.Articles(c, &req)
+	SendSuccess(c, articles)
 }

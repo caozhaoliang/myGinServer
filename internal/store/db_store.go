@@ -32,6 +32,7 @@ type DBStore interface {
 	SaveTask(ctx context.Context, task task.Task) (string, error)
 
 	Channels(ctx context.Context) ([]article.Channel, error)
+	GetArticles(ctx context.Context, req *article.ArticlesRequest) (article.ArticlesResponse, error)
 }
 
 func NewDatabase(config *config.DBConfig) (DBStore, error) {
@@ -137,4 +138,73 @@ func (s *DbStore) Channels(ctx context.Context) ([]article.Channel, error) {
 	var channels []article.Channel
 	err := s.db.SelectContext(ctx, &channels, sqlText)
 	return channels, err
+}
+
+func (s *DbStore) GetArticles(ctx context.Context, req *article.ArticlesRequest) (article.ArticlesResponse, error) {
+	var response article.ArticlesResponse
+	query := `select id, title, cover,channel_id, status, pubdate, view_count, like_count, comment_count from articles`
+	countQuery := `SELECT COUNT(*) FROM articles`
+
+	// 构建条件部分
+	var args []interface{}
+	var conditions []string
+
+	// 状态过滤
+	if req.Status != "" {
+		conditions = append(conditions, "status = ?")
+		args = append(args, req.Status)
+	}
+
+	// 频道ID过滤
+	if req.ChannelId != "" {
+		conditions = append(conditions, "channel_id = ?")
+		args = append(args, req.ChannelId)
+	}
+
+	// 发布日期范围过滤
+	if req.PubdateStart != "" {
+		conditions = append(conditions, "pubdate >= ?")
+		args = append(args, req.PubdateStart)
+	}
+
+	if req.PubdateEnd != "" {
+		conditions = append(conditions, "pubdate <= ?")
+		args = append(args, req.PubdateEnd)
+	}
+
+	// 添加WHERE条件到查询语句
+	if len(conditions) > 0 {
+		whereClause := " WHERE " + conditions[0]
+		for i := 1; i < len(conditions); i++ {
+			whereClause += " AND " + conditions[i]
+		}
+		query += whereClause
+		countQuery += whereClause
+	}
+
+	// 获取总数
+	err := s.db.QueryRowContext(ctx, countQuery, args...).Scan(&response.Total)
+	if err != nil {
+		return response, err
+	}
+
+	// 添加分页
+	if req.Page <= 0 {
+		req.Page = 1
+	}
+	if req.PageSize <= 0 {
+		req.PageSize = 10
+	}
+
+	offset := (req.Page - 1) * req.PageSize
+	query += " ORDER BY pubdate DESC LIMIT ? OFFSET ?"
+	args = append(args, req.PageSize, offset)
+
+	// 执行查询
+	err = s.db.SelectContext(ctx, &response.Data, query, args...)
+	if err != nil {
+		return response, err
+	}
+
+	return response, nil
 }
