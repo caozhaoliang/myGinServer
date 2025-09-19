@@ -23,3 +23,6 @@ func (a *ArticleServer) Channels(ctx context.Context) ([]article.Channel, error)
 func (a *ArticleServer) Articles(ctx context.Context, req *article.ArticlesRequest) (article.ArticlesResponse, error) {
 	return a.dbStore.GetArticles(ctx, req)
 }
+func (a *ArticleServer) DeleteArticle(ctx context.Context, id string) error {
+	return a.dbStore.DeleteArticle(ctx, id)
+}

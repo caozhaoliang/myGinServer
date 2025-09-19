@@ -65,4 +65,14 @@ insert into articles values (
     100,
     10,
     5
+),(
+    uuid(),
+    'Python 语言简介',
+    'http://localhost:9000/imagebucket/5q1z5tmizh.png',
+    'd2e3f4a5-b6c7-8d9e-0f1g-2h3i4j5k6l7m',
+    'published',
+    '2025-10-01 08:30:00',
+    199,
+    103,
+    54
 );

@@ -89,6 +89,7 @@ func NewRouter(controller *controller.UserController, db store.DBStore) *Router 
 
 		api.GET("/channels", controller.Channels)
 		api.GET("/articles", controller.Articles)
+		api.DELETE("/article", controller.DeleteArticle)
 	}
 	route.r = r
 	return route

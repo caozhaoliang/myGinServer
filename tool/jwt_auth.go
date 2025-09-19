@@ -36,7 +36,7 @@ func NewJwtAuthMiddleware(db store.DBStore) (*JwtAuthMiddleware, error) {
 	authMiddleware, err := jwt.New(&jwt.GinJWTMiddleware{
 		Realm:       "",
 		Key:         jwtKey,
-		Timeout:     time.Hour,
+		Timeout:     time.Hour * 8,
 		MaxRefresh:  time.Hour,
 		IdentityKey: JwtIdentityKey,
 		PayloadFunc: func(data interface{}) jwt.MapClaims {

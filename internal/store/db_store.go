@@ -32,6 +32,7 @@ type DBStore interface {
 	SaveTask(ctx context.Context, task task.Task) (string, error)
 
 	Channels(ctx context.Context) ([]article.Channel, error)
+	DeleteArticle(ctx context.Context, id string) error
 	GetArticles(ctx context.Context, req *article.ArticlesRequest) (article.ArticlesResponse, error)
 }
 
@@ -138,6 +139,11 @@ func (s *DbStore) Channels(ctx context.Context) ([]article.Channel, error) {
 	var channels []article.Channel
 	err := s.db.SelectContext(ctx, &channels, sqlText)
 	return channels, err
+}
+
+func (s *DbStore) DeleteArticle(ctx context.Context, id string) error {
+	_, err := s.db.ExecContext(ctx, `DELETE FROM articles WHERE id = ?`, id)
+	return err
 }
 
 func (s *DbStore) GetArticles(ctx context.Context, req *article.ArticlesRequest) (article.ArticlesResponse, error) {

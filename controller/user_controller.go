@@ -132,3 +132,17 @@ func (u *UserController) Articles(c *gin.Context) {
 	articles, err := u.articleServer.Articles(c, &req)
 	SendSuccess(c, articles)
 }
+
+func (u *UserController) DeleteArticle(c *gin.Context) {
+	id, b := c.GetQuery("id")
+	if !b {
+		SendError(c, http.StatusBadRequest, errors.New("ID为空"))
+		return
+	}
+	err := u.articleServer.DeleteArticle(c, id)
+	if err != nil {
+		SendError(c, http.StatusInternalServerError, err)
+		return
+	}
+	SendSuccess(c, nil)
+}
