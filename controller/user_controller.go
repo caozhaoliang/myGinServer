@@ -2,8 +2,9 @@ package controller
 
 import (
 	"myGinServer/internal/store"
-	"myGinServer/internal/task"
-	user2 "myGinServer/internal/user"
+	"myGinServer/models/task"
+	user2 "myGinServer/models/user"
+	"myGinServer/service"
 	"myGinServer/service/userserver"
 	"net/http"
 
@@ -12,16 +13,19 @@ import (
 )
 
 type UserController struct {
-	userServer  *userserver.UserServer
-	tasksServer *userserver.TasksServer
+	userServer    *userserver.UserServer
+	tasksServer   *userserver.TasksServer
+	articleServer *service.ArticleServer
 }
 
 func NewUserController(db store.DBStore) *UserController {
 	tasksServer := userserver.NewTasksServer(db)
 	userServer := userserver.NewUserServer(db)
+	articleServer := service.NewArticleServer(db)
 	return &UserController{
-		tasksServer: tasksServer,
-		userServer:  userServer,
+		tasksServer:   tasksServer,
+		userServer:    userServer,
+		articleServer: articleServer,
 	}
 }
 
@@ -106,4 +110,13 @@ func (u *UserController) SaveTask(c *gin.Context) {
 		return
 	}
 	SendSuccess(c, id)
+}
+
+func (u *UserController) Channels(c *gin.Context) {
+	channels, err := u.articleServer.Channels(c)
+	if err != nil {
+		SendError(c, http.StatusInternalServerError, err)
+		return
+	}
+	SendSuccess(c, channels)
 }

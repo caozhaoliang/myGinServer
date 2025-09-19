@@ -3,7 +3,7 @@ package userserver
 import (
 	"context"
 	"myGinServer/internal/store"
-	user2 "myGinServer/internal/user"
+	user2 "myGinServer/models/user"
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"

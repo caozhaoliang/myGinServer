@@ -5,8 +5,9 @@ import (
 	"database/sql"
 	"fmt"
 	"myGinServer/config"
-	"myGinServer/internal/task"
-	user2 "myGinServer/internal/user"
+	"myGinServer/models/article"
+	"myGinServer/models/task"
+	user2 "myGinServer/models/user"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/google/uuid"
@@ -29,6 +30,8 @@ type DBStore interface {
 	ListTasks(ctx context.Context, keyword string) ([]task.Task, error)
 	DelTasks(ctx context.Context, id string) error
 	SaveTask(ctx context.Context, task task.Task) (string, error)
+
+	Channels(ctx context.Context) ([]article.Channel, error)
 }
 
 func NewDatabase(config *config.DBConfig) (DBStore, error) {
@@ -127,4 +130,11 @@ func (s *DbStore) SaveTask(ctx context.Context, task task.Task) (string, error) 
 	}
 	_, err := s.db.ExecContext(ctx, execSQL, task.Id, task.Name, task.Des, task.Completed)
 	return task.Id, err
+}
+
+func (s *DbStore) Channels(ctx context.Context) ([]article.Channel, error) {
+	sqlText := `select id, name, des, status from channel`
+	var channels []article.Channel
+	err := s.db.SelectContext(ctx, &channels, sqlText)
+	return channels, err
 }

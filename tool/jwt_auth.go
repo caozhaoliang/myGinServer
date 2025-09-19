@@ -3,7 +3,7 @@ package tool
 import (
 	"myGinServer/controller"
 	"myGinServer/internal/store"
-	user2 "myGinServer/internal/user"
+	user2 "myGinServer/models/user"
 	"time"
 
 	jwt "github.com/appleboy/gin-jwt/v2"

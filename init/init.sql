@@ -17,3 +17,27 @@ create table `tasks` (
  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='任务表';
 
 insert into tasks values (1, '吃饭', '吃饭的描述', 0),(2, '睡觉', '睡觉的描述', 0),(3, '打代码', '打代码的描述', 0);
+
+
+CREATE TABLE IF NOT EXISTS channel (
+    id VARCHAR(36) NOT NULL PRIMARY KEY,  -- 假设 ID 是 UUID 格式，长度 36
+    name VARCHAR(100) NOT NULL,           -- 频道名称，非空
+    status VARCHAR(20) NOT NULL DEFAULT 'active' COMMENT '频道状态（active：正常，disabled：禁用）',
+    des VARCHAR(255) default '',                             -- 描述，可空
+    created_on DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP         -- 创建时间，非空
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='频道表';
+
+INSERT INTO channel (id, name, des,status, created_on)
+VALUES (
+           'c1f8d7e6-5a4b-3c2d-1e0f-9g8h7i6j5k4l',
+           'GO',
+           '用于讨论GO编程语言、开发工具等技术话题',
+           'active',
+           '2023-10-01 08:30:00'
+       ),(
+           'd2e3f4a5-b6c7-8d9e-0f1g-2h3i4j5k6l7m',
+           'Python',
+           '用于讨论Python编程语言、开发工具等技术话题',
+          'active',
+           '2023-10-02 14:15:00'
+       );

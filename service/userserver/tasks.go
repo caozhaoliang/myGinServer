@@ -3,7 +3,7 @@ package userserver
 import (
 	"context"
 	"myGinServer/internal/store"
-	"myGinServer/internal/task"
+	"myGinServer/models/task"
 )
 
 type TasksServer struct {
