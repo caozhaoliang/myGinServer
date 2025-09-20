@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 )
 
@@ -137,6 +138,28 @@ func (u *UserController) Articles(c *gin.Context) {
 	}
 	articles, err := u.articleServer.Articles(c, &req)
 	SendSuccess(c, articles)
+}
+func (u *UserController) SaveArticle(c *gin.Context) {
+	var req article.ArticleSaveReq
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		SendError(c, http.StatusBadRequest, err)
+		return
+	}
+	var article = article.ArticleVO{
+		Id:        uuid.New().String(),
+		ChannelId: req.ChannelId,
+		Title:     req.Title,
+		Status:    "draft",
+		Cover:     req.Cover,
+		Pubdate:   article.CustomTime(time.Now()),
+	}
+	err = u.articleServer.SaveArticle(c, &article)
+	if err != nil {
+		SendError(c, http.StatusInternalServerError, err)
+		return
+	}
+	SendSuccess(c, article.Id)
 }
 
 func (u *UserController) DeleteArticle(c *gin.Context) {

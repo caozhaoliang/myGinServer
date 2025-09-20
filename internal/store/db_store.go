@@ -33,6 +33,8 @@ type DBStore interface {
 
 	Channels(ctx context.Context) ([]article.Channel, error)
 	DeleteArticle(ctx context.Context, id string) error
+	SaveArticle(ctx context.Context, article *article.ArticleVO) error
+	UpdateArticle(ctx context.Context, article *article.ArticleVO) error
 	GetArticles(ctx context.Context, req *article.ArticlesRequest) (article.ArticlesResponse, error)
 }
 
@@ -143,6 +145,24 @@ func (s *DbStore) Channels(ctx context.Context) ([]article.Channel, error) {
 
 func (s *DbStore) DeleteArticle(ctx context.Context, id string) error {
 	_, err := s.db.ExecContext(ctx, `DELETE FROM articles WHERE id = ?`, id)
+	return err
+}
+
+func (s *DbStore) SaveArticle(ctx context.Context, article *article.ArticleVO) error {
+	execSQL := `insert into articles(id, title, cover, channel_id, 
+                     status, pubdate, view_count, like_count, comment_count) 
+				values (?,?,?,?,?,?,?,?,?)`
+	_, err := s.db.ExecContext(ctx, execSQL, article.Id, article.Title, article.Cover, article.ChannelId,
+		article.Status, article.Pubdate, article.ViewCount, article.LikeCount, article.CommentCount)
+	return err
+}
+
+func (s *DbStore) UpdateArticle(ctx context.Context, article *article.ArticleVO) error {
+	execSQL := `update articles set title = ?, cover = ?, channel_id = ?, 
+                     status = ?, view_count = ?, like_count = ?, comment_count = ?
+				where id = ?`
+	_, err := s.db.ExecContext(ctx, execSQL, article.Title, article.Cover, article.ChannelId,
+		article.Status, article.ViewCount, article.LikeCount, article.CommentCount, article.Id)
 	return err
 }
 

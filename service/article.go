@@ -26,3 +26,7 @@ func (a *ArticleServer) Articles(ctx context.Context, req *article.ArticlesReque
 func (a *ArticleServer) DeleteArticle(ctx context.Context, id string) error {
 	return a.dbStore.DeleteArticle(ctx, id)
 }
+
+func (a *ArticleServer) SaveArticle(ctx context.Context, req *article.ArticleVO) error {
+	return a.dbStore.SaveArticle(ctx, req)
+}

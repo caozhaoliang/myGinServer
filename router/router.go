@@ -90,6 +90,7 @@ func NewRouter(controller *controller.UserController, db store.DBStore) *Router 
 		api.GET("/channels", controller.Channels)
 		api.GET("/articles", controller.Articles)
 		api.DELETE("/article", controller.DeleteArticle)
+		api.POST("/article/save", controller.SaveArticle)
 	}
 	apiObject := r.Group("/api/object", jwtMiddleware.Middleware.MiddlewareFunc())
 	{
