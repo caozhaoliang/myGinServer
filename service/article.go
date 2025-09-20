@@ -30,3 +30,10 @@ func (a *ArticleServer) DeleteArticle(ctx context.Context, id string) error {
 func (a *ArticleServer) SaveArticle(ctx context.Context, req *article.ArticleVO) error {
 	return a.dbStore.SaveArticle(ctx, req)
 }
+
+func (a *ArticleServer) UpdateArticle(ctx context.Context, req *article.ArticleVO) error {
+	return a.dbStore.UpdateArticle(ctx, req)
+}
+func (a *ArticleServer) ArticleDetail(ctx context.Context, id string) (*article.ArticleVO, error) {
+	return a.dbStore.GetArticle(ctx, id)
+}

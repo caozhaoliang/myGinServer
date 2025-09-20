@@ -34,6 +34,7 @@ type DBStore interface {
 	Channels(ctx context.Context) ([]article.Channel, error)
 	DeleteArticle(ctx context.Context, id string) error
 	SaveArticle(ctx context.Context, article *article.ArticleVO) error
+	GetArticle(ctx context.Context, id string) (article *article.ArticleVO, err error)
 	UpdateArticle(ctx context.Context, article *article.ArticleVO) error
 	GetArticles(ctx context.Context, req *article.ArticlesRequest) (article.ArticlesResponse, error)
 }
@@ -149,26 +150,32 @@ func (s *DbStore) DeleteArticle(ctx context.Context, id string) error {
 }
 
 func (s *DbStore) SaveArticle(ctx context.Context, article *article.ArticleVO) error {
-	execSQL := `insert into articles(id, title, cover, channel_id, 
+	execSQL := `insert into articles(id, title,content, cover, channel_id, 
                      status, pubdate, view_count, like_count, comment_count) 
-				values (?,?,?,?,?,?,?,?,?)`
-	_, err := s.db.ExecContext(ctx, execSQL, article.Id, article.Title, article.Cover, article.ChannelId,
+				values (?,?,?,?,?,?,?,?,?,?)`
+	_, err := s.db.ExecContext(ctx, execSQL, article.Id, article.Title, article.Content, article.Cover, article.ChannelId,
 		article.Status, article.Pubdate, article.ViewCount, article.LikeCount, article.CommentCount)
 	return err
 }
+func (s *DbStore) GetArticle(ctx context.Context, id string) (*article.ArticleVO, error) {
+	sqlText := `select id, title, content, cover, channel_id, status, pubdate, view_count
+     , like_count, comment_count from articles where id = ?`
+	articleVo := new(article.ArticleVO)
+	err := s.db.GetContext(ctx, articleVo, sqlText, id)
+	return articleVo, err
+}
 
 func (s *DbStore) UpdateArticle(ctx context.Context, article *article.ArticleVO) error {
-	execSQL := `update articles set title = ?, cover = ?, channel_id = ?, 
-                     status = ?, view_count = ?, like_count = ?, comment_count = ?
+	execSQL := `update articles set title = ?,content=?, cover = ?, channel_id = ?
 				where id = ?`
-	_, err := s.db.ExecContext(ctx, execSQL, article.Title, article.Cover, article.ChannelId,
-		article.Status, article.ViewCount, article.LikeCount, article.CommentCount, article.Id)
+	_, err := s.db.ExecContext(ctx, execSQL, article.Title, article.Content,
+		article.Cover, article.ChannelId, article.Id)
 	return err
 }
 
 func (s *DbStore) GetArticles(ctx context.Context, req *article.ArticlesRequest) (article.ArticlesResponse, error) {
 	var response article.ArticlesResponse
-	query := `select id, title, cover,channel_id, status, pubdate, view_count, like_count, comment_count from articles`
+	query := `select id, title,content, cover,channel_id, status, pubdate, view_count, like_count, comment_count from articles`
 	countQuery := `SELECT COUNT(*) FROM articles`
 
 	// 构建条件部分

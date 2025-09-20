@@ -55,9 +55,12 @@ CREATE TABLE IF NOT EXISTS articles (
     INDEX idx_status (status),
     INDEX idx_pubdate (pubdate)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='文章表';
+ALTER TABLE articles
+    ADD COLUMN content TEXT COMMENT '文章内容' AFTER title;
 insert into articles values (
     'a1b2c3d4-e5f6-7g8h-9i0j-1k2l3m4n5o6p',
     'Go 语言简介',
+    '',
     'https://example.com/go-cover.png',
     'c1f8d7e6-5a4b-3c2d-1e0f-9g8h7i6j5k4l',
     'published',
@@ -68,6 +71,7 @@ insert into articles values (
 ),(
     uuid(),
     'Python 语言简介',
+    '',
     'http://localhost:9000/imagebucket/5q1z5tmizh.png',
     'd2e3f4a5-b6c7-8d9e-0f1g-2h3i4j5k6l7m',
     'published',

@@ -18,6 +18,26 @@ func (ct CustomTime) MarshalJSON() ([]byte, error) {
 	return []byte(formatted), nil
 }
 
+//
+//func (ct *CustomTime) Scan(src interface{}) error {
+//	// 将数据库返回值转换为字符串
+//	var s string
+//	switch v := src.(type) {
+//	case string:
+//		s = v
+//	case []byte:
+//		s = string(v)
+//	case nil:
+//		s = ""
+//	}
+//	t, err := time.Parse("2006-01-02 15:04:05", s)
+//	if err != nil {
+//		return err
+//	}
+//	*ct = CustomTime(t)
+//	return nil
+//}
+
 // 实现 driver.Valuer 接口
 func (ct CustomTime) Value() (driver.Value, error) {
 	// 将 MyTime 转换为 SQL 驱动可以处理的 time.Time 类型
@@ -27,6 +47,7 @@ func (ct CustomTime) Value() (driver.Value, error) {
 type ArticleVO struct {
 	Id           string     `json:"id" db:"id"`
 	Title        string     `json:"title" db:"title"`
+	Content      string     `json:"content" db:"content"`
 	Cover        string     `json:"cover" db:"cover"`
 	Status       string     `json:"status" db:"status"`
 	ChannelId    string     `json:"channel_id" db:"channel_id"`

@@ -162,6 +162,37 @@ func (u *UserController) SaveArticle(c *gin.Context) {
 	SendSuccess(c, article.Id)
 }
 
+func (u *UserController) GetArticle(c *gin.Context) {
+	var err error
+	idParam := c.Param("id")
+	if len(idParam) == 0 {
+		SendError(c, http.StatusBadRequest, errors.New("ID为空"))
+		return
+	}
+	detail, err := u.articleServer.ArticleDetail(c, idParam)
+	if err != nil {
+		SendError(c, http.StatusInternalServerError, err)
+		return
+	}
+	SendSuccess(c, detail)
+}
+func (u *UserController) UpdateArticle(c *gin.Context) {
+	var articleVo = article.ArticleVO{}
+	if err := c.ShouldBindJSON(&articleVo); err != nil {
+		SendError(c, http.StatusBadRequest, err)
+		return
+	}
+	if articleVo.Id == "" {
+		SendError(c, http.StatusBadRequest, errors.New("ID为空"))
+		return
+	}
+	err := u.articleServer.UpdateArticle(c, &articleVo)
+	if err != nil {
+		SendError(c, http.StatusInternalServerError, err)
+	}
+	SendSuccess(c, nil)
+}
+
 func (u *UserController) DeleteArticle(c *gin.Context) {
 	id, b := c.GetQuery("id")
 	if !b {
