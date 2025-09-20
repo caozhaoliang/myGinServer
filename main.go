@@ -19,7 +19,7 @@ func main() {
 		panic(err)
 	}
 
-	userController := controller.NewUserController(db)
+	userController := controller.NewUserController(db, configYaml)
 
 	r := router.NewRouter(userController, db)
 

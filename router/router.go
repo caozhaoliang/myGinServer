@@ -91,6 +91,10 @@ func NewRouter(controller *controller.UserController, db store.DBStore) *Router 
 		api.GET("/articles", controller.Articles)
 		api.DELETE("/article", controller.DeleteArticle)
 	}
+	apiObject := r.Group("/api/object", jwtMiddleware.Middleware.MiddlewareFunc())
+	{
+		apiObject.PUT("/presigned-upload-url", controller.PresignedUpload)
+	}
 	route.r = r
 	return route
 }

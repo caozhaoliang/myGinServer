@@ -1,13 +1,16 @@
 package controller
 
 import (
+	"myGinServer/config"
 	"myGinServer/internal/store"
 	"myGinServer/models/article"
 	"myGinServer/models/task"
 	user2 "myGinServer/models/user"
 	"myGinServer/service"
+	"myGinServer/service/objectserver"
 	"myGinServer/service/userserver"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
@@ -17,16 +20,19 @@ type UserController struct {
 	userServer    *userserver.UserServer
 	tasksServer   *userserver.TasksServer
 	articleServer *service.ArticleServer
+	objectServer  *objectserver.ObjectServer
 }
 
-func NewUserController(db store.DBStore) *UserController {
+func NewUserController(db store.DBStore, cfg *config.Config) *UserController {
 	tasksServer := userserver.NewTasksServer(db)
 	userServer := userserver.NewUserServer(db)
 	articleServer := service.NewArticleServer(db)
+	objectServer := objectserver.NewObjectServer(&cfg.ObjectConfig)
 	return &UserController{
 		tasksServer:   tasksServer,
 		userServer:    userServer,
 		articleServer: articleServer,
+		objectServer:  objectServer,
 	}
 }
 
@@ -145,4 +151,18 @@ func (u *UserController) DeleteArticle(c *gin.Context) {
 		return
 	}
 	SendSuccess(c, nil)
+}
+
+func (u *UserController) PresignedUpload(c *gin.Context) {
+	filename := c.Query("filename")
+	if filename == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "filename is required"})
+		return
+	}
+	url, err := u.objectServer.Cli.PreSignedPutObject(filename, time.Minute*60)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	SendSuccess(c, url.String())
 }

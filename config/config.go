@@ -35,7 +35,8 @@ func InitConfig(configYaml string) *Config {
 }
 
 type Config struct {
-	DBConfig DBConfig `yaml:"db"`
+	DBConfig     DBConfig           `yaml:"db"`
+	ObjectConfig ObjectServerConfig `yaml:"object"`
 }
 
 type DBConfig struct {
@@ -44,4 +45,12 @@ type DBConfig struct {
 	DbUser     string `yaml:"db_user"`
 	DbPassword string `yaml:"db_password"`
 	DbName     string `yaml:"db_name"`
+}
+
+type ObjectServerConfig struct {
+	Endpoint     string `yaml:"endpoint"`
+	AccessID     string `yaml:"access_id"`
+	AccessSecret string `yaml:"access_secret"`
+	BucketName   string `yaml:"bucket_name"`
+	RootPath     string `yaml:"root_path"`
 }
