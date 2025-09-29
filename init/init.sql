@@ -8,6 +8,8 @@ CREATE TABLE users (
                        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
                        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户表';
+alter table users add column phone_num varchar(64) not null default '' comment '手机号' after email;
+alter table users add column role varchar(36) not null default 'register' comment '角色：admin、guest、register、vip、vip2' after email;
 
 create table `tasks` (
     id char(36) not null primary key,

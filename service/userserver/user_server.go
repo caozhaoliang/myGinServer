@@ -56,6 +56,7 @@ func (u *UserServer) Register(user *user2.User) (userId string, err error) {
 		Username:     user.Username,
 		Email:        user.Email,
 		PasswordHash: hashedPassword,
+		Role:         "register",
 		Status:       "active",
 		UserId:       uuid.New().String(),
 	}

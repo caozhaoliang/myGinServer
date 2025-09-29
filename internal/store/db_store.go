@@ -62,7 +62,7 @@ func (s *DbStore) IsExistsUserNameEmail(ctx context.Context, username, email str
 }
 
 func (s *DbStore) GetUserByName(ctx context.Context, username string) (user user2.User, err error) {
-	sqlText := `select user_id, username, email,status from users where username=?`
+	sqlText := `select user_id, username, email, phone_num, role, status from users where username=?`
 	err = s.db.SelectContext(ctx, &user, sqlText, username)
 	if errors.Is(err, sql.ErrNoRows) {
 		return user2.User{}, nil
@@ -70,7 +70,7 @@ func (s *DbStore) GetUserByName(ctx context.Context, username string) (user user
 	return user, err
 }
 func (s *DbStore) GetUser(ctx context.Context, id string) (user user2.User, err error) {
-	sqlText := `select user_id, username, email,status from users where user_id=? limit 1`
+	sqlText := `select user_id, username, email, phone_num, role, status from users where user_id=? limit 1`
 	err = s.db.GetContext(ctx, &user, sqlText, id)
 	if errors.Is(err, sql.ErrNoRows) {
 		return user2.User{}, nil
@@ -104,8 +104,9 @@ func (s *DbStore) CheckUserInfo(ctx context.Context, username, password string) 
 }
 
 func (s *DbStore) SaveUser(ctx context.Context, user user2.User) error {
-	sqlText := `INSERT INTO users(user_id, username, email, password_hash, status) VALUES(?, ?, ?, ?, ?)`
-	_, err := s.db.ExecContext(ctx, sqlText, user.UserId, user.Username, user.Email, user.PasswordHash, user.Status)
+	sqlText := `INSERT INTO users(user_id, username, email, role, password_hash, status) VALUES(?, ?, ?, ?, ?, ?)`
+	_, err := s.db.ExecContext(ctx, sqlText, user.UserId, user.Username, user.Email,
+		user.Role, user.PasswordHash, user.Status)
 	return err
 }
 
