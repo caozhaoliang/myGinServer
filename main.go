@@ -21,7 +21,9 @@ func main() {
 
 	userController := controller.NewUserController(db, configYaml)
 
-	r := router.NewRouter(userController, db)
+	chatController := controller.NewChatController(configYaml)
+
+	r := router.NewRouter(userController, chatController, db)
 
 	if prometheusMonitor {
 		go func() {

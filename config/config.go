@@ -37,6 +37,7 @@ func InitConfig(configYaml string) *Config {
 type Config struct {
 	DBConfig     DBConfig           `yaml:"db"`
 	ObjectConfig ObjectServerConfig `yaml:"object"`
+	Cache        CacheConfig        `yaml:"cache"`
 }
 
 type DBConfig struct {
@@ -53,4 +54,12 @@ type ObjectServerConfig struct {
 	AccessSecret string `yaml:"access_secret"`
 	BucketName   string `yaml:"bucket_name"`
 	RootPath     string `yaml:"root_path"`
+}
+
+type CacheConfig struct {
+	RedisHost string `yaml:"redis_host"`
+	RedisPort string `yaml:"redis_port"`
+	Password  string `yaml:"password"`
+	PoolSize  int    `yaml:"pool_size"`
+	DB        int    `yaml:"db"`
 }

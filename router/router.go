@@ -59,7 +59,9 @@ func Cors() gin.HandlerFunc {
 		c.Next()
 	}
 }
-func NewRouter(controller *controller.UserController, db store.DBStore) *Router {
+func NewRouter(controller *controller.UserController,
+	chatController *controller.ChatController,
+	db store.DBStore) *Router {
 	route := &Router{}
 	r := gin.Default()
 
@@ -97,6 +99,11 @@ func NewRouter(controller *controller.UserController, db store.DBStore) *Router 
 	apiObject := r.Group("/api/object", jwtMiddleware.Middleware.MiddlewareFunc())
 	{
 		apiObject.PUT("/presigned-upload-url", controller.PresignedUpload)
+	}
+	chatApi := r.Group("/chat")
+	{
+		chatApi.GET("/sendMsg", chatController.SendMsg)
+		chatApi.GET("/sendUserMsg", chatController.SendUserMsg)
 	}
 	route.r = r
 	return route
