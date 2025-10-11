@@ -66,6 +66,16 @@ func (u *UserController) Register(c *gin.Context) {
 	SendSuccess(c, userId)
 }
 
+// Profile 获取用户个人信息
+// @Summary 获取用户个人信息
+// @Description 根据用户ID获取用户的详细信息
+// @Tags 用户相关
+// @Accept json
+// @Produce json
+// @Success 200 {object} user2.User "用户信息"
+// @Failure 400 {object} interface{} "请求参数错误"
+// @Failure 500 {object} interface{} "服务器内部错误"
+// @Router /user/profile [get]
 func (u *UserController) Profile(c *gin.Context) {
 	user, exists := c.Get("id")
 	if !exists {

@@ -2,6 +2,7 @@ package router
 
 import (
 	"myGinServer/controller"
+	_ "myGinServer/docs"
 	"myGinServer/internal/store"
 	"myGinServer/tool"
 	"net/http"
@@ -12,6 +13,8 @@ import (
 	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 type Router struct {
@@ -69,6 +72,7 @@ func NewRouter(controller *controller.UserController,
 	pprof.Register(r)
 	logger := tool.InitLogger()
 	r.Use(RecoveryWithLogger(logger), gin.Logger()).Use(Cors())
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	r.POST("/register", controller.Register)
 
 	jwtMiddleware, err := tool.NewJwtAuthMiddleware(db)
