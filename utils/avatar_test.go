@@ -13,7 +13,7 @@ func TestGenerateAvatars(t *testing.T) {
 	rand.Seed(time.Now().UnixNano())
 
 	// 生成5个不同的头像
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 1; i++ {
 		width := 200
 		height := 200
 

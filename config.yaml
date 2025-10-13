@@ -1,0 +1,21 @@
+
+db:
+  db_host: localhost
+  db_port: 3306
+  db_user: root
+  db_password: 12345678
+  db_name: mytest
+
+object:
+  access_id: my-app-access-key
+  access_secret: 1GjUCLD5JbxuMa5AkwOOg8jkRS8=
+  endpoint: http://127.0.0.1:9000
+  bucket_name: appbucket
+  root_path: /
+
+cache:
+  redis_host: localhost
+  redis_port: 6379
+  password: '123456'
+  pool_size: 10
+  db: 0

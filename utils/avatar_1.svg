@@ -1,0 +1,16 @@
+<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="#f0f0f0"/><path d="M30,60 Q50,0 170,60 L170,190 L30,190 Q50,20 30,60 Z" fill="#777777"/><ellipse cx="100" cy="100" rx="50" ry="60" fill="#A67B5B"/>
+			<ellipse cx="75" cy="80" rx="7" ry="4" fill="white"/>
+			<ellipse cx="75" cy="80" rx="3" ry="3" fill="#FF6347"/>
+			<ellipse cx="74" cy="79" rx="1" ry="1" fill="black"/>
+			
+			<ellipse cx="125" cy="80" rx="7" ry="4" fill="white"/>
+			<ellipse cx="125" cy="80" rx="3" ry="3" fill="#800080"/>
+			<ellipse cx="124" cy="79" rx="1" ry="1" fill="black"/>
+		<circle cx="100" cy="96" r="6" fill="#D2B48C" opacity="0.8"/><path d="M76,120 Q100,130 124,120" stroke="#8B4513" stroke-width="2" fill="none"/>
+			<circle cx="75" cy="80" r="15" fill="none" stroke="#333" stroke-width="2"/>
+			<circle cx="125" cy="80" r="15" fill="none" stroke="#333" stroke-width="2"/>
+			<line x1="90" y1="80" x2="110" y2="80" stroke="#333" stroke-width="2"/>
+			<line x1="60" y1="80" x2="68" y2="73" stroke="#333" stroke-width="2"/>
+			<line x1="140" y1="80" x2="132" y2="73" stroke="#333" stroke-width="2"/>
+            <polygon points="100,105 110,110 90,110" fill="orange" />
+		</svg>
