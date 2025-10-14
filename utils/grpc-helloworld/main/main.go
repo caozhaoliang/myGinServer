@@ -1,11 +1,13 @@
-package server
+package main
 
 import (
 	"context"
 	"fmt"
 	"log"
 	pb "myGinServer/utils/grpc-helloworld/protogen"
-	"testing"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"net"
@@ -15,6 +17,7 @@ import (
 
 type server struct {
 	pb.UnimplementedGreeterServer
+	addr string
 }
 
 const (
@@ -23,7 +26,7 @@ const (
 
 // SayHello 实现简单的 RPC
 func (s *server) SayHello(ctx context.Context, in *pb.HelloRequest) (*pb.HelloReply, error) {
-	log.Printf("Received: %v", in.GetName())
+	log.Printf("Received: %v from:%s", in.GetName(), s.addr)
 	return &pb.HelloReply{Message: "Hello " + in.GetName()}, nil
 }
 
@@ -42,14 +45,25 @@ func (s *server) SayHelloStream(in *pb.HelloRequest, stream pb.Greeter_SayHelloS
 	}
 	return nil
 }
+func main() {
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+	addrs := []string{"localhost:50050", "localhost:50051"}
+	for _, addr := range addrs {
+		go startServer(addr)
+	}
 
-func TestServer(t *testing.T) {
-	lis, err := net.Listen("tcp", port)
+	<-stop
+	log.Println("Shutting down servers...")
+
+}
+func startServer(addr string) {
+	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 	s := grpc.NewServer()
-	pb.RegisterGreeterServer(s, &server{})
+	pb.RegisterGreeterServer(s, &server{addr: addr})
 	log.Printf("server listening at %v", lis.Addr())
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
