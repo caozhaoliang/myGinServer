@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	pb "myGinServer/utils/grpc-helloworld/protogen"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -21,7 +23,7 @@ func TestClient(t *testing.T) {
 		log.Fatalf("did not connect: %v", err)
 	}
 	defer conn.Close()
-	c := NewGreeterClient(conn)
+	c := pb.NewGreeterClient(conn)
 
 	// 设置超时上下文
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -29,7 +31,7 @@ func TestClient(t *testing.T) {
 
 	// 调用简单 RPC
 	name := "World"
-	r, err := c.SayHello(ctx, &HelloRequest{Name: name})
+	r, err := c.SayHello(ctx, &pb.HelloRequest{Name: name})
 	if err != nil {
 		log.Fatalf("could not greet: %v", err)
 	}
@@ -39,7 +41,7 @@ func TestClient(t *testing.T) {
 	streamCtx, streamCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer streamCancel()
 
-	stream, err := c.SayHelloStream(streamCtx, &HelloRequest{Name: name})
+	stream, err := c.SayHelloStream(streamCtx, &pb.HelloRequest{Name: name})
 	if err != nil {
 		log.Fatalf("could not start stream: %v", err)
 	}

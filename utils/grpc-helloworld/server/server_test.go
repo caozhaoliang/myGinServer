@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
-	pb "myGinServer/utils/grpc-helloworld/client"
+	pb "myGinServer/utils/grpc-helloworld/protogen"
 	"testing"
 	"time"
 
