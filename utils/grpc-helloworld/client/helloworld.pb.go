@@ -121,10 +121,10 @@ const file_proto_helloworld_proto_rawDesc = "" +
 	"\x04name\x18\x01 \x01(\tR\x04name\"&\n" +
 	"\n" +
 	"HelloReply\x12\x18\n" +
-	"\amessage\x18\x01 \x01(\tR\amessage2\x8e\x01\n" +
+	"\amessage\x18\x01 \x01(\tR\amessage2\x91\x01\n" +
 	"\aGreeter\x12>\n" +
-	"\bSayHello\x12\x18.helloworld.HelloRequest\x1a\x16.helloworld.HelloReply\"\x00\x12C\n" +
-	"\rSayHelloAgain\x12\x18.helloworld.HelloRequest\x1a\x16.helloworld.HelloReply\"\x00B\n" +
+	"\bSayHello\x12\x18.helloworld.HelloRequest\x1a\x16.helloworld.HelloReply\"\x00\x12F\n" +
+	"\x0eSayHelloStream\x12\x18.helloworld.HelloRequest\x1a\x16.helloworld.HelloReply\"\x000\x01B\n" +
 	"Z\b./clientb\x06proto3"
 
 var (
@@ -146,9 +146,9 @@ var file_proto_helloworld_proto_goTypes = []any{
 }
 var file_proto_helloworld_proto_depIdxs = []int32{
 	0, // 0: helloworld.Greeter.SayHello:input_type -> helloworld.HelloRequest
-	0, // 1: helloworld.Greeter.SayHelloAgain:input_type -> helloworld.HelloRequest
+	0, // 1: helloworld.Greeter.SayHelloStream:input_type -> helloworld.HelloRequest
 	1, // 2: helloworld.Greeter.SayHello:output_type -> helloworld.HelloReply
-	1, // 3: helloworld.Greeter.SayHelloAgain:output_type -> helloworld.HelloReply
+	1, // 3: helloworld.Greeter.SayHelloStream:output_type -> helloworld.HelloReply
 	2, // [2:4] is the sub-list for method output_type
 	0, // [0:2] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name

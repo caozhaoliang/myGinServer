@@ -34,5 +34,23 @@ func TestClient(t *testing.T) {
 		log.Fatalf("could not greet: %v", err)
 	}
 	log.Printf("Simple RPC response: %s", r.GetMessage())
+	// 调用流式 RPC
+	log.Println("Starting stream RPC...")
+	streamCtx, streamCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer streamCancel()
+
+	stream, err := c.SayHelloStream(streamCtx, &HelloRequest{Name: name})
+	if err != nil {
+		log.Fatalf("could not start stream: %v", err)
+	}
+
+	for {
+		reply, err := stream.Recv()
+		if err != nil {
+			log.Printf("Stream finished: %v", err)
+			break
+		}
+		log.Printf("Stream response: %s", reply.GetMessage())
+	}
 
 }
