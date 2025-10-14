@@ -14,14 +14,14 @@ import (
 )
 
 type User struct {
-	Id     bson.ObjectID `bson:"_id"`
+	Id     bson.ObjectID `bson:"_id,omitempty"`
 	UserId string        `bson:"user_id"`
 	Name   string        `bson:"name"`
 	Email  string        `bson:"email"`
 	Age    int           `bson:"age"`
 }
 
-func TestConnect(t *testing.T) {
+func createClient() *mongo.Client {
 	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
 	//SetAuth(options.Credential{
 	//			Username:   "username",      // 用户名
@@ -34,18 +34,24 @@ func TestConnect(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer func() {
-		if err := client.Disconnect(context.TODO()); err != nil {
-			panic(err)
-		}
-	}()
-	coll := client.Database("myapp").Collection("movies")
-	title := "Back to the Future"
+	return client
+}
+func disconnect(client *mongo.Client) {
+	if err := client.Disconnect(context.TODO()); err != nil {
+		panic(err)
+	}
+}
+
+func TestFindOne(t *testing.T) {
+	client := createClient()
+	var err error
+
+	coll := client.Database("myapp").Collection("user")
 	var result bson.M
-	err = coll.FindOne(context.TODO(), bson.D{{"title", title}}).
+	err = coll.FindOne(context.TODO(), bson.D{{"name", "WangWu"}}).
 		Decode(&result)
 	if errors.Is(err, mongo.ErrNoDocuments) {
-		fmt.Printf("No document was found with the title %s\n", title)
+		fmt.Printf("No document was found ")
 		return
 	}
 	if err != nil {
@@ -56,4 +62,59 @@ func TestConnect(t *testing.T) {
 		panic(err)
 	}
 	fmt.Printf("%s\n", jsonData)
+}
+
+func TestDelete(t *testing.T) {
+	client := createClient()
+	coll := client.Database("myapp").Collection("user")
+	deleteResult, err := coll.DeleteOne(context.TODO(), bson.D{{"name", "ZhangSan"}})
+	fmt.Println(deleteResult, err)
+}
+
+func TestInsertOne(t *testing.T) {
+	user := User{
+		UserId: "myUser10001",
+		Name:   "ZhangSan",
+		Email:  "ZhangSan@gmail.com",
+		Age:    18,
+	}
+	client := createClient()
+	collection := client.Database("myapp").Collection("user")
+
+	insertOne, err := collection.InsertOne(context.Background(), user)
+	fmt.Println(insertOne, err)
+}
+
+func TestInsertMany(t *testing.T) {
+	client := createClient()
+	collection := client.Database("myapp").Collection("user")
+	users := []interface{}{
+		User{
+			UserId: "myUser10001",
+			Name:   "ZhangSan",
+			Email:  "ZhangSan@gmail.com",
+			Age:    18,
+		},
+		User{
+			UserId: "myUser10002",
+			Name:   "LiSi",
+			Email:  "LiSi@gmail.com",
+			Age:    19,
+		},
+		User{
+			UserId: "myUser10003",
+			Name:   "WangWu",
+		},
+	}
+	insertMany, err := collection.InsertMany(context.Background(), users)
+	fmt.Println(insertMany, err)
+}
+
+func TestUpdateOne(t *testing.T) {
+	client := createClient()
+	collection := client.Database("myapp").Collection("user")
+	updateResult, err := collection.UpdateOne(context.Background(),
+		bson.D{{"name", "WangWu"}},
+		bson.D{{"$set", bson.D{{"email", "WangWu@gmail.com"}, {"age", 20}}}})
+	fmt.Println(updateResult, err)
 }
