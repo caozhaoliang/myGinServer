@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"fmt"
 	"log"
 	pb "myGinServer/utils/grpc-helloworld/protogen"
 	_ "myGinServer/utils/grpc-helloworld/resolver"
@@ -67,6 +68,30 @@ func TestClient(t *testing.T) { // 注册自定义负载均衡器
 		md := metadata.Pairs("user-id", "123456")
 		ctxMd := metadata.NewOutgoingContext(context.Background(), md)
 		r, err := c.SayHello(ctxMd, &pb.HelloRequest{Name: uid})
+		if err != nil {
+			log.Fatalf("could not greet: %v", err)
+		}
+		log.Printf("Hash RPC response: %s", r.GetMessage())
+	}
+}
+
+func TestWeightedClient(t *testing.T) {
+	conn, err := grpc.NewClient(
+		address,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultServiceConfig(`{"loadBalancingPolicy":"weighted_round_robin"}`),
+	)
+	if err != nil {
+		log.Fatalf("客户端: 连接失败: %v", err)
+	}
+	defer conn.Close()
+	log.Println("客户端: 连接成功!")
+	c := pb.NewGreeterClient(conn)
+
+	for i := 1; i <= 10; i++ {
+		md := metadata.Pairs("user-id", "123456")
+		ctxMd := metadata.NewOutgoingContext(context.Background(), md)
+		r, err := c.SayHello(ctxMd, &pb.HelloRequest{Name: fmt.Sprintf("user%d", i)})
 		if err != nil {
 			log.Fatalf("could not greet: %v", err)
 		}
