@@ -4,6 +4,7 @@ import (
 	"myGinServer/controller"
 	_ "myGinServer/docs"
 	"myGinServer/internal/store"
+	"myGinServer/pkg/metrics"
 	"myGinServer/tool"
 	"net/http"
 	"net/http/httputil"
@@ -64,12 +65,17 @@ func Cors() gin.HandlerFunc {
 }
 func NewRouter(controller *controller.UserController,
 	chatController *controller.ChatController,
+	metricsCollector *metrics.Metrics,
 	db store.DBStore) *Router {
+
 	route := &Router{}
 	r := gin.Default()
 
 	r.Use(gzip.Gzip(gzip.DefaultCompression))
+
+	r.Use(metricsCollector.GinMiddleware())
 	pprof.Register(r)
+
 	logger := tool.InitLogger()
 	r.Use(RecoveryWithLogger(logger), gin.Logger()).Use(Cors())
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

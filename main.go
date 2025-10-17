@@ -4,6 +4,7 @@ import (
 	"myGinServer/config"
 	"myGinServer/controller"
 	"myGinServer/internal/store"
+	"myGinServer/pkg/metrics"
 	"myGinServer/router"
 )
 
@@ -22,8 +23,10 @@ func main() {
 	userController := controller.NewUserController(db, configYaml)
 
 	chatController := controller.NewChatController(configYaml)
+	metricsCollector := metrics.NewMetrics()
 
-	r := router.NewRouter(userController, chatController, db)
+	r := router.NewRouter(userController, chatController,
+		metricsCollector, db)
 
 	if prometheusMonitor {
 		go func() {
