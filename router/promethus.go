@@ -5,7 +5,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-func NewPromethusMetricsEngine() *gin.Engine {
+func NewPrometheusMetricsEngine() *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))

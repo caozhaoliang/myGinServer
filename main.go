@@ -27,7 +27,7 @@ func main() {
 
 	if prometheusMonitor {
 		go func() {
-			router.NewPromethusMetricsEngine().Run(":18081")
+			router.NewPrometheusMetricsEngine().Run(":18081")
 		}()
 	}
 
