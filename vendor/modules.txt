@@ -308,6 +308,9 @@ github.com/nikolalohinski/gonja/nodes
 github.com/nikolalohinski/gonja/parser
 github.com/nikolalohinski/gonja/tokens
 github.com/nikolalohinski/gonja/utils
+# github.com/orcaman/concurrent-map/v2 v2.0.1
+## explicit; go 1.18
+github.com/orcaman/concurrent-map/v2
 # github.com/pelletier/go-toml/v2 v2.2.3
 ## explicit; go 1.21.0
 github.com/pelletier/go-toml/v2
