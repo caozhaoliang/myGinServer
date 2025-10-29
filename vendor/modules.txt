@@ -179,6 +179,11 @@ github.com/gogo/protobuf/protoc-gen-gogo/descriptor
 # github.com/golang-jwt/jwt/v4 v4.5.2
 ## explicit; go 1.16
 github.com/golang-jwt/jwt/v4
+# github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0
+## explicit
+github.com/golang/freetype
+github.com/golang/freetype/raster
+github.com/golang/freetype/truetype
 # github.com/golang/protobuf v1.5.4
 ## explicit; go 1.17
 github.com/golang/protobuf/proto
@@ -194,6 +199,12 @@ github.com/google/wire
 # github.com/goph/emperror v0.17.2
 ## explicit; go 1.12
 github.com/goph/emperror
+# github.com/gorilla/securecookie v1.1.2
+## explicit; go 1.20
+github.com/gorilla/securecookie
+# github.com/gorilla/sessions v1.4.0
+## explicit; go 1.23
+github.com/gorilla/sessions
 # github.com/gorilla/websocket v1.5.3
 ## explicit; go 1.12
 github.com/gorilla/websocket
@@ -575,6 +586,10 @@ golang.org/x/crypto/sha3
 golang.org/x/exp/constraints
 golang.org/x/exp/maps
 golang.org/x/exp/slices
+# golang.org/x/image v0.32.0
+## explicit; go 1.24.0
+golang.org/x/image/font
+golang.org/x/image/math/fixed
 # golang.org/x/mod v0.28.0
 ## explicit; go 1.24.0
 golang.org/x/mod/internal/lazyregexp
