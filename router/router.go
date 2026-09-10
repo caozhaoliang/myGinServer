@@ -65,6 +65,7 @@ func Cors() gin.HandlerFunc {
 }
 func NewRouter(controller *controller.UserController,
 	chatController *controller.ChatController,
+	dispatch *controller.DispatchController,
 	metricsCollector *metrics.Metrics,
 	db store.DBStore) *Router {
 
@@ -114,6 +115,10 @@ func NewRouter(controller *controller.UserController,
 	{
 		chatApi.GET("/sendMsg", chatController.SendMsg)
 		chatApi.GET("/sendUserMsg", chatController.SendUserMsg)
+	}
+	dispatchApi := r.Group("/dispatch")
+	{
+		dispatchApi.POST("/node", dispatch.SaveNode)
 	}
 	route.r = r
 	return route
