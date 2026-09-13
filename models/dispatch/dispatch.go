@@ -54,3 +54,17 @@ type Line struct {
 func (l *Line) TableName() string {
 	return "line"
 }
+
+type Datasource struct {
+	Id        string         `json:"id" gorm:"column:id;primaryKey;type:VARCHAR(64);not null;comment:ID"`               // ID
+	Code      string         `json:"code" gorm:"column:code;type:VARCHAR(64);not null;default:;comment:编码"`             // 编码
+	Name      string         `json:"name" gorm:"column:name;type:VARCHAR(128);not null;default:;comment:名称"`            // 名称
+	Type      string         `json:"type" gorm:"column:type;type:VARCHAR(32);not null;default:mysql;comment:类型"`        //
+	ConnStr   string         `json:"conn_str" gorm:"column:conn_str;type:VARCHAR(1024);not null;default:;comment:连接信息"` // 连接信息
+	CreatedOn sql.NullTime   `json:"created_on" gorm:"column:created_on;type:DATETIME;default:NULL;comment:创建时间"`       // 创建时间
+	CreatedBy sql.NullString `json:"created_by" gorm:"column:created_by;type:VARCHAR(64);default:NULL;comment:创建人ID"`   // 创建人ID
+}
+
+func (d *Datasource) TableName() string {
+	return "datasource"
+}

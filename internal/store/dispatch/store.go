@@ -64,3 +64,25 @@ func (s *Store) ListLines(ctx context.Context, project string) ([]dispatch.Line,
 	}
 	return lines, nil
 }
+
+func (s *Store) SaveDatasource(ctx context.Context, project string, req dispatch.Datasource) error {
+	db, err := s.saas.GetDB(ctx, project)
+	if err != nil {
+		return err
+	}
+	r := db.Save(&req)
+	if r.Error != nil {
+		return r.Error
+	}
+	return nil
+}
+
+func (s *Store) ListDatasource(ctx context.Context, project string) ([]dispatch.Datasource, error) {
+	db, err := s.saas.GetDB(ctx, project)
+	if err != nil {
+		return nil, err
+	}
+	var ds []dispatch.Datasource
+	err = db.Find(&ds).Error
+	return ds, err
+}

@@ -125,6 +125,11 @@ func NewRouter(controller *controller.UserController,
 		dispatchApi.POST("/line", dispatch.SavaLine)
 		dispatchApi.GET("/graph", dispatch.Graph)
 	}
+	dsApi := r.Group("/api/datasource")
+	{
+		dsApi.GET("/list", dispatch.ListDatasource)
+		dsApi.POST("/save", dispatch.SaveDatasource)
+	}
 	route.r = r
 	return route
 }

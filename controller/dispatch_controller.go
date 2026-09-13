@@ -1,13 +1,14 @@
 package controller
 
 import (
-	"errors"
 	"myGinServer/api/request"
 	"myGinServer/config"
 	"myGinServer/internal/store/dispatch"
 	"myGinServer/pkg/saas_db"
 	"myGinServer/service/dispatchserver"
 	"net/http"
+
+	"github.com/pkg/errors"
 
 	"github.com/gin-gonic/gin"
 )
@@ -72,4 +73,27 @@ func (s *DispatchController) Graph(c *gin.Context) {
 		return
 	}
 	SendSuccess(c, &r)
+}
+
+func (s *DispatchController) SaveDatasource(c *gin.Context) {
+	var req request.DatasourceReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		SendError(c, http.StatusBadRequest, errors.New("获取请求参数失败"))
+		return
+	}
+	err := s.nodeServer.SaveDatasource(c, req)
+	if err != nil {
+		SendError(c, http.StatusInternalServerError, errors.Wrap(err, "保存数据源失败"))
+		return
+	}
+	SendSuccess(c, "ok")
+}
+
+func (s *DispatchController) ListDatasource(c *gin.Context) {
+	datasource, err := s.nodeServer.ListDatasource(c)
+	if err != nil {
+		SendError(c, http.StatusInternalServerError, errors.Wrap(err, "获取数据源列表失败"))
+		return
+	}
+	SendSuccess(c, datasource)
 }
