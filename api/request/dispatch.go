@@ -2,6 +2,7 @@ package request
 
 type NodeSaveReq struct {
 	Id       string `json:"id"`
+	Code     string `json:"code"`
 	Name     string `json:"name"`
 	Content  string `json:"content"`
 	Type     string `json:"type"`

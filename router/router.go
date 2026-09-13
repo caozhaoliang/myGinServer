@@ -64,7 +64,7 @@ func Cors() gin.HandlerFunc {
 	}
 }
 func NewRouter(controller *controller.UserController,
-	chatController *controller.ChatController,
+	// chatController *controller.ChatController,
 	dispatch *controller.DispatchController,
 	metricsCollector *metrics.Metrics,
 	db store.DBStore) *Router {
@@ -76,7 +76,10 @@ func NewRouter(controller *controller.UserController,
 
 	r.Use(metricsCollector.GinMiddleware())
 	pprof.Register(r)
-
+	// 自定义 NoRoute，避免 gzip 关闭后 Gin 再写 404
+	r.NoRoute(func(c *gin.Context) {
+		c.JSON(404, gin.H{"error": "not found"})
+	})
 	logger := tool.InitLogger()
 	r.Use(RecoveryWithLogger(logger), gin.Logger()).Use(Cors())
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -111,14 +114,16 @@ func NewRouter(controller *controller.UserController,
 	{
 		apiObject.PUT("/presigned-upload-url", controller.PresignedUpload)
 	}
-	chatApi := r.Group("/chat")
-	{
-		chatApi.GET("/sendMsg", chatController.SendMsg)
-		chatApi.GET("/sendUserMsg", chatController.SendUserMsg)
-	}
-	dispatchApi := r.Group("/dispatch")
+	//chatApi := r.Group("/chat")
+	//{
+	//	chatApi.GET("/sendMsg", chatController.SendMsg)
+	//	chatApi.GET("/sendUserMsg", chatController.SendUserMsg)
+	//}
+	dispatchApi := r.Group("/api/dispatch")
 	{
 		dispatchApi.POST("/node", dispatch.SaveNode)
+		dispatchApi.POST("/line", dispatch.SavaLine)
+		dispatchApi.GET("/graph", dispatch.Graph)
 	}
 	route.r = r
 	return route

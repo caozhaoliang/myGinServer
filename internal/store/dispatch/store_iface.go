@@ -6,5 +6,8 @@ import (
 )
 
 type StoreIface interface {
-	SaveNode(ctx context.Context, project string, node dispatch.Node) error
+	SaveNode(ctx context.Context, project string, node dispatch.Nodes) error
+	SaveLine(ctx context.Context, project string, line dispatch.Line) error
+	NodeList(ctx context.Context, project string) ([]dispatch.Nodes, error)
+	ListLines(ctx context.Context, project string) ([]dispatch.Line, error)
 }

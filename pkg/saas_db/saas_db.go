@@ -6,13 +6,14 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
+	"gorm.io/gorm"
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 )
 
 type SaaS interface {
-	GetDB(ctx context.Context, project string) (*sqlx.DB, error)
+	GetDB(ctx context.Context, project string) (*gorm.DB, error)
 }
 type DBConfig struct {
 	Database string
@@ -30,7 +31,7 @@ type MysqlSaaSStore struct {
 	dbsManagerLock sync.Mutex
 }
 
-func NewSaaS(config *DBConfig) SaaS {
+func NewSaaS(config *DBConfig) *MysqlSaaSStore {
 	c := mysql.NewConfig()
 
 	// 2. 设置必需参数

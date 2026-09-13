@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"errors"
 	"myGinServer/api/request"
 	"myGinServer/config"
 	"myGinServer/internal/store/dispatch"
@@ -46,4 +47,29 @@ func (s *DispatchController) SaveNode(c *gin.Context) {
 		return
 	}
 	SendSuccess(c, "ok")
+}
+
+func (s *DispatchController) SavaLine(c *gin.Context) {
+	var req request.LineSaveReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		SendError(c, http.StatusBadRequest, errors.New("无效的请求参数"))
+		return
+	}
+	err := s.nodeServer.SaveLine(c, &req)
+	if err != nil {
+		SendError(c, http.StatusInternalServerError, err)
+	} else {
+		SendSuccess(c, "ok")
+	}
+	return
+}
+
+func (s *DispatchController) Graph(c *gin.Context) {
+
+	r, err := s.nodeServer.Graph(c)
+	if err != nil {
+		SendError(c, http.StatusInternalServerError, err)
+		return
+	}
+	SendSuccess(c, &r)
 }

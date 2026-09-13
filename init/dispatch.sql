@@ -1,4 +1,3 @@
-package init
 
 -- 创建节点表
 CREATE TABLE `nodes` (
@@ -13,7 +12,7 @@ CREATE TABLE `nodes` (
         `created_on` DATETIME DEFAULT NULL COMMENT '创建时间',
         `created_by` VARCHAR(64) DEFAULT NULL COMMENT '创建人ID',
         PRIMARY KEY (`id`),
-        KEY `idx_code` (`code`),
+        KEY `idx_code` (`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='节点表';
 
 -- 创建连线表
