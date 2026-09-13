@@ -86,3 +86,15 @@ func (s *Store) ListDatasource(ctx context.Context, project string) ([]dispatch.
 	err = db.Find(&ds).Error
 	return ds, err
 }
+
+func (s *Store) GetDatasource(ctx context.Context, project string, id string) (dispatch.Datasource, error) {
+	db, err := s.saas.GetDB(ctx, project)
+	if err != nil {
+		return dispatch.Datasource{}, err
+	}
+	var ds dispatch.Datasource
+	if err := db.Where("id = ?", id).First(&ds).Error; err != nil {
+		return dispatch.Datasource{}, err
+	}
+	return ds, nil
+}

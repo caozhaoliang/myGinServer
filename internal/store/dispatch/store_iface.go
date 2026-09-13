@@ -13,4 +13,5 @@ type StoreIface interface {
 
 	SaveDatasource(ctx context.Context, project string, req dispatch.Datasource) error
 	ListDatasource(ctx context.Context, project string) ([]dispatch.Datasource, error)
+	GetDatasource(ctx context.Context, project string, id string) (dispatch.Datasource, error)
 }

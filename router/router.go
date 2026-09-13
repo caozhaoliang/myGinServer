@@ -129,6 +129,8 @@ func NewRouter(controller *controller.UserController,
 	{
 		dsApi.GET("/list", dispatch.ListDatasource)
 		dsApi.POST("/save", dispatch.SaveDatasource)
+		dsApi.GET("/tables", dispatch.MetaTables)
+		dsApi.GET("/columns", dispatch.MetaColumns)
 	}
 	route.r = r
 	return route

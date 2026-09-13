@@ -28,8 +28,8 @@ func NewDispatchController(config *config.Config) *DispatchController {
 		MaxIdleConns: 2,
 		MaxOpenConns: 2,
 	})
-	nodeServer := dispatchserver.NewNodeServer(iStore)
 
+	nodeServer := dispatchserver.NewNodeServer(iStore)
 	return &DispatchController{nodeServer: nodeServer}
 }
 
@@ -96,4 +96,38 @@ func (s *DispatchController) ListDatasource(c *gin.Context) {
 		return
 	}
 	SendSuccess(c, datasource)
+}
+func (s *DispatchController) MetaTables(c *gin.Context) {
+
+	type MetaTableReq struct {
+		DatasourceId string `json:"datasource_id" form:"datasource_id"`
+	}
+	var req MetaTableReq
+	if err := c.ShouldBindQuery(&req); err != nil {
+		SendError(c, http.StatusBadRequest, errors.Wrap(err, "获取数据源id失败"))
+		return
+	}
+	tables, err := s.nodeServer.MetaTables(c, req.DatasourceId)
+	if err != nil {
+		SendError(c, http.StatusInternalServerError, errors.Wrap(err, ""))
+		return
+	}
+	SendSuccess(c, tables)
+}
+func (s *DispatchController) MetaColumns(c *gin.Context) {
+	type MetaColumnReq struct {
+		DatasourceId string `json:"datasource_id" form:"datasource_id"`
+		Table        string `json:"table" form:"table"`
+	}
+	var req MetaColumnReq
+	if err := c.ShouldBindQuery(&req); err != nil {
+		SendError(c, http.StatusBadRequest, errors.Wrap(err, "获取数据源id失败"))
+		return
+	}
+	tables, err := s.nodeServer.MetaColumns(c, req.DatasourceId, req.Table)
+	if err != nil {
+		SendError(c, http.StatusInternalServerError, errors.Wrap(err, ""))
+		return
+	}
+	SendSuccess(c, tables)
 }
