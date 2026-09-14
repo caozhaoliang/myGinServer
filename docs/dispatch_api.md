@@ -638,6 +638,99 @@ type CollectNodeContent struct {
 }
 ```
 
+### 7.4 GET /api/datasource/ods/tables —— 获取ods表列表
+
+根据配置的ods信息返回该库下所有表的表名与注释。
+
+#### 7.4.1 请求参数（Query）
+
+
+#### 7.4.2 响应参数（data 字段）
+
+`data` 为数组，元素结构如下：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| name | string | 表名 |
+| description | string | 表注释（无注释时为空字符串） |
+
+#### 7.4.3 响应示例
+
+```json
+{
+  "code": 200,
+  "data": [
+    { "name": "orders", "description": "订单表" },
+    { "name": "users", "description": "用户表" }
+  ]
+}
+```
+
+#### 7.4.4 失败响应
+
+```json
+{
+  "code": 400,
+  "message": "缺少数据源ID参数"
+}
+```
+
+```json
+{
+  "code": 500,
+  "message": "获取数据源失败: ... / 查询表列表失败: ..."
+}
+```
+
+### 7.5 GET /api/datasource/ods/columns —— 按ods的表名获取列列表
+
+根据表名，返回该表下所有列的字段名、类型、注释及主键序号。
+
+#### 7.5.1 请求参数（Query）
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| table | string | 是 | 表名 |
+
+#### 7.5.2 响应参数（data 字段）
+
+`data` 为数组，元素结构如下：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| name | string | 字段名 |
+| type | string | 字段类型（如 `varchar(64)`、`bigint`） |
+| comment | string | 字段注释（无注释时为空字符串） |
+| value | string | 可选，分区字段 value 值（当前固定为空） |
+| primary_key_seq | number | 主键序号，0 表示非主键，1 起为复合主键中的第几个字段 |
+
+#### 7.5.3 响应示例
+
+```json
+{
+  "code": 200,
+  "data": [
+    { "name": "id", "type": "bigint", "comment": "主键", "value": "", "primary_key_seq": 1 },
+    { "name": "name", "type": "varchar(64)", "comment": "姓名", "value": "", "primary_key_seq": 0 }
+  ]
+}
+```
+
+#### 7.5.4 失败响应
+
+```json
+{
+  "code": 400,
+  "message": "缺少数据源ID或表名参数"
+}
+```
+
+```json
+{
+  "code": 500,
+  "message": "查询列信息失败: ..."
+}
+```
 ---
 
 ## 8. 前端联调要点

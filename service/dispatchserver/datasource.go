@@ -21,8 +21,8 @@ func (n *NodeServer) SaveDatasource(ctx context.Context, req request.DatasourceR
 		Name:      req.Name,
 		Type:      req.Type,
 		ConnStr:   req.ConnStr,
-		CreatedOn: sql.NullTime{Time: time.Now()},
-		CreatedBy: sql.NullString{String: "admin"},
+		CreatedOn: sql.NullTime{Time: time.Now(), Valid: true},
+		CreatedBy: sql.NullString{String: "admin", Valid: true},
 	})
 
 	return err

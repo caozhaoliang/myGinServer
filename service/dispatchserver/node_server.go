@@ -34,13 +34,13 @@ func (n *NodeServer) SaveNode(ctx context.Context, req *request.NodeSaveReq) err
 		Id:        req.Id,
 		Code:      req.Code,
 		Name:      req.Name,
-		Content:   sql.NullString{String: req.Content},
+		Content:   sql.NullString{String: req.Content, Valid: true},
 		Schedule:  req.Schedule,
 		Type:      mdispatch.NodeType(req.Type),
 		Status:    mdispatch.NormalStatus,
 		Deleted:   0,
-		CreatedOn: sql.NullTime{Time: time.Now()},
-		CreatedBy: sql.NullString{String: "admin"},
+		CreatedOn: sql.NullTime{Time: time.Now(), Valid: true},
+		CreatedBy: sql.NullString{String: "admin", Valid: true},
 	})
 	if err != nil {
 		return err
@@ -65,8 +65,8 @@ func (n *NodeServer) SaveLine(ctx context.Context, req *request.LineSaveReq) err
 		BehindId:  req.BehindId,
 		Type:      mdispatch.LineType(req.Type),
 		Deleted:   0,
-		CreatedOn: sql.NullTime{Time: time.Now()},
-		CreatedBy: sql.NullString{String: "admin"},
+		CreatedOn: sql.NullTime{Time: time.Now(), Valid: true},
+		CreatedBy: sql.NullString{String: "admin", Valid: true},
 	})
 	return err
 }

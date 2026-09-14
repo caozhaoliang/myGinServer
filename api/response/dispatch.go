@@ -3,8 +3,8 @@ package response
 import "myGinServer/api/request"
 
 type Graph struct {
-	Lines []request.LineSaveReq
-	Nodes []request.NodeSaveReq
+	Lines []request.LineSaveReq `json:"lines"`
+	Nodes []request.NodeSaveReq `json:"nodes"`
 }
 
 type MetaTables struct {

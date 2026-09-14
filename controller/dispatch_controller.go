@@ -100,7 +100,7 @@ func (s *DispatchController) ListDatasource(c *gin.Context) {
 func (s *DispatchController) MetaTables(c *gin.Context) {
 
 	type MetaTableReq struct {
-		DatasourceId string `json:"datasource_id" form:"datasource_id"`
+		DatasourceId string `json:"ds_id" form:"ds_id"`
 	}
 	var req MetaTableReq
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -116,7 +116,7 @@ func (s *DispatchController) MetaTables(c *gin.Context) {
 }
 func (s *DispatchController) MetaColumns(c *gin.Context) {
 	type MetaColumnReq struct {
-		DatasourceId string `json:"datasource_id" form:"datasource_id"`
+		DatasourceId string `json:"ds_id" form:"ds_id"`
 		Table        string `json:"table" form:"table"`
 	}
 	var req MetaColumnReq
@@ -125,6 +125,35 @@ func (s *DispatchController) MetaColumns(c *gin.Context) {
 		return
 	}
 	tables, err := s.nodeServer.MetaColumns(c, req.DatasourceId, req.Table)
+	if err != nil {
+		SendError(c, http.StatusInternalServerError, errors.Wrap(err, ""))
+		return
+	}
+	SendSuccess(c, tables)
+}
+
+const (
+	odsDatasourceId = "615966d0-af61-11f1-8f44-866b84548888"
+)
+
+func (s *DispatchController) OdsTables(c *gin.Context) {
+	tables, err := s.nodeServer.MetaTables(c, odsDatasourceId)
+	if err != nil {
+		SendError(c, http.StatusInternalServerError, errors.Wrap(err, ""))
+		return
+	}
+	SendSuccess(c, tables)
+}
+func (s *DispatchController) OdsColumns(c *gin.Context) {
+	type OdsMetaColumnReq struct {
+		Table string `json:"table" form:"table"`
+	}
+	var req OdsMetaColumnReq
+	if err := c.ShouldBindQuery(&req); err != nil {
+		SendError(c, http.StatusBadRequest, errors.Wrap(err, "获取参数失败"))
+		return
+	}
+	tables, err := s.nodeServer.MetaColumns(c, odsDatasourceId, req.Table)
 	if err != nil {
 		SendError(c, http.StatusInternalServerError, errors.Wrap(err, ""))
 		return

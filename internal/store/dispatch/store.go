@@ -20,11 +20,8 @@ func (s *Store) SaveNode(ctx context.Context, project string, node dispatch.Node
 	if err != nil {
 		return err
 	}
-	r := db.Save(node)
-	if r.Error != nil {
-		return r.Error
-	}
-	return nil
+	err = db.Save(&node).Error
+	return err
 }
 
 func (s *Store) SaveLine(ctx context.Context, project string, line dispatch.Line) error {
@@ -32,11 +29,7 @@ func (s *Store) SaveLine(ctx context.Context, project string, line dispatch.Line
 	if err != nil {
 		return err
 	}
-	r := db.Save(line)
-	if r.Error != nil {
-		return r.Error
-	}
-	return nil
+	return db.Save(&line).Error
 }
 
 func (s *Store) NodeList(ctx context.Context, project string) ([]dispatch.Nodes, error) {

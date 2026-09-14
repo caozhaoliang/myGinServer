@@ -9,19 +9,19 @@ type NodeStatus string
 type LineType string
 
 var (
-	NodeVirtual NodeType
-	NodeSQL     NodeType
-	NodeCollect NodeType
-	NodeSync    NodeType
+	NodeVirtual NodeType = "Virtual"
+	NodeSQL     NodeType = "SQL"
+	NodeCollect NodeType = "Collect"
+	NodeSync    NodeType = "Sync"
 
-	NormalStatus NodeStatus
-	DryRun       NodeStatus
-	StopRun      NodeStatus
+	NormalStatus NodeStatus = "Normal"
+	DryRun       NodeStatus = "DryRun"
+	StopRun      NodeStatus = "StopRun"
 )
 
 var (
-	Dotted LineType // 点虚线
-	Solid  LineType // 实线
+	Dotted LineType = "Dotted" // 点虚线
+	Solid  LineType = "Solid"  // 实线
 )
 
 type Nodes struct {
