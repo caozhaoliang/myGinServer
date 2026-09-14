@@ -142,3 +142,45 @@ func (s *Store) UpdateExecQueueResp(ctx context.Context, project, runId, resp, s
 	}
 	return nil
 }
+
+func (s *Store) InstanceExists(ctx context.Context, project, batchId string) (bool, error) {
+	db, err := s.saas.GetDB(ctx, project)
+	if err != nil {
+		return false, err
+	}
+	var count int64
+	err = db.Model(&dispatch.NodeInstance{}).Where("batch_id = ?", batchId).Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+func (s *Store) BatchCreateInstance(ctx context.Context, project string,
+	dep []dispatch.InstanceLine, instance []dispatch.NodeInstance) error {
+	db, err := s.saas.GetDB(ctx, project)
+	if err != nil {
+		return err
+	}
+	tx := db.WithContext(ctx).Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+	}()
+	if len(dep) > 0 {
+		err = tx.Model(&dispatch.InstanceLine{}).CreateInBatches(dep, 1000).Error
+		if err != nil {
+			return err
+		}
+	}
+	if len(instance) > 0 {
+		err = tx.Model(&dispatch.NodeInstance{}).CreateInBatches(instance, 1000).Error
+	}
+	return err
+}

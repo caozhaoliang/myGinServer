@@ -100,3 +100,49 @@ func EntityAlreadyRun(status string) bool {
 func (m *ExecQueue) TableName() string {
 	return "exec_queue"
 }
+
+// -------- 实例 -----
+type InstanceStatus string
+
+var (
+	InstanceStatusNotReady InstanceStatus = "NotReady"
+	InstanceStatusWaiting  InstanceStatus = "Waiting"
+	InstanceStatusRunning  InstanceStatus = "Running"
+	InstanceStatusSuccess  InstanceStatus = "Success"
+	InstanceStatusFailure  InstanceStatus = "Failure"
+	InstanceStatusAbort    InstanceStatus = "Abort"
+	InstanceStatusTimeOut  InstanceStatus = "TimeOut"
+)
+
+// 节点实例表
+type NodeInstance struct {
+	Id          string         `gorm:"column:id;type:varchar(64);primary_key;comment:ID" json:"id"`
+	NodeId      string         `gorm:"column:node_id;type:varchar(32);comment:节点id;NOT NULL" json:"node_id"`
+	Name        string         `gorm:"column:name;type:varchar(32);comment:名称;NOT NULL" json:"name"`
+	Index       int            `gorm:"column:index;type:tinyint(4);default:0;comment:批次内节点实例索引;NOT NULL" json:"index"`
+	ExecuteTime sql.NullTime   `gorm:"column:execute_time;type:timestamp;comment:预期执行时间;NOT NULL" json:"execute_time"`
+	StartTime   sql.NullTime   `gorm:"column:start_time;type:timestamp;comment:开始执行时间;NOT NULL" json:"start_time"`
+	EndTime     sql.NullTime   `gorm:"column:end_time;type:timestamp;comment:执行结束时间;NOT NULL" json:"end_time"`
+	Status      string         `gorm:"column:status;type:varchar(32);default:NotReady;comment:状态;NOT NULL" json:"status"`
+	BatchId     string         `gorm:"column:batch_id;type:varchar(32);comment:批次ID;NOT NULL" json:"batch_id"`
+	CreatedOn   sql.NullTime   `gorm:"column:created_on;type:datetime;comment:创建时间" json:"created_on"`
+	CreatedBy   sql.NullString `gorm:"column:created_by;type:varchar(64);comment:创建人ID" json:"created_by"`
+}
+
+func (m *NodeInstance) TableName() string {
+	return "node_instance"
+}
+
+// 实例连线表
+type InstanceLine struct {
+	Id        string         `gorm:"column:id;type:varchar(64);primary_key;comment:ID" json:"id"`
+	Ahead     string         `gorm:"column:ahead;type:varchar(32);comment:ahead;NOT NULL" json:"ahead"`
+	Behind    string         `gorm:"column:behind;type:varchar(32);comment:behind;NOT NULL" json:"behind"`
+	BatchId   string         `gorm:"column:batch_id;type:varchar(32);comment:batch_id;NOT NULL" json:"batch_id"`
+	CreatedOn sql.NullTime   `gorm:"column:created_on;type:datetime;comment:创建时间" json:"created_on"`
+	CreatedBy sql.NullString `gorm:"column:created_by;type:varchar(64);comment:创建人ID" json:"created_by"`
+}
+
+func (m *InstanceLine) TableName() string {
+	return "instance_line"
+}

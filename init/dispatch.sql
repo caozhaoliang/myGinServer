@@ -57,3 +57,31 @@ CREATE TABLE IF NOT EXISTS `exec_queue` (
     PRIMARY KEY (`id`),
     UNIQUE KEY unq_idx(`run_id`)
 )ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='执行队列表';
+
+
+CREATE TABLE IF NOT EXISTS `node_instance` (
+    `id` VARCHAR(64) NOT NULL COMMENT 'ID',
+    `node_id` VARCHAR(32) NOT NULL COMMENT '节点id',
+    `name`  VARCHAR(32) NOT NULL COMMENT '名称',
+    `index` tinyint(4) NOT NULL DEFAULT 0 COMMENT '批次内节点实例索引',
+    `execute_time` timestamp NOT NULL COMMENT '预期执行时间',
+    `start_time` timestamp NOT NULL COMMENT '开始执行时间',
+    `end_time` timestamp NOT NULL COMMENT '执行结束时间',
+    `status`    VARCHAR(32) NOT NULL DEFAULT 'NotReady' COMMENT '状态',
+    `batch_id`  VARCHAR(32)  NOT NULL COMMENT '批次ID',
+    `created_on` DATETIME DEFAULT NULL COMMENT '创建时间',
+    `created_by` VARCHAR(64) DEFAULT NULL COMMENT '创建人ID',
+    PRIMARY KEY (`id`),
+    KEY `idx_node_id`(`node_id`)
+)ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='节点实例表';
+
+CREATE TABLE IF NOT EXISTS `instance_line` (
+    `id` VARCHAR(64) NOT NULL COMMENT 'ID',
+    `ahead` VARCHAR(32) NOT NULL COMMENT 'ahead',
+    `behind` VARCHAR(32) NOT NULL COMMENT 'behind',
+    `batch_id` VARCHAR(32) NOT NULL COMMENT 'batch_id',
+    `created_on` DATETIME DEFAULT NULL COMMENT '创建时间',
+    `created_by` VARCHAR(64) DEFAULT NULL COMMENT '创建人ID',
+    PRIMARY KEY (`id`),
+    KEY `idx_batch_id`(`batch_id`)
+)ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='实例连线表';

@@ -33,3 +33,14 @@ type TestRunSqlReq struct {
 	Params map[string]interface{} `json:"params" binding:"required"`
 	Type   string                 `json:"type"`
 }
+
+type InstanceCreateReq struct {
+	Id      string `json:"id"`       // 节点 id
+	Project string `json:"project"`  // 项目名称
+	BizDate string `json:"biz_date"` // 业务日期
+	TestRun bool   `json:"test_run"` // 测试运行
+}
+
+func (i InstanceCreateReq) BatchId() string {
+	return i.Project + i.BizDate
+}

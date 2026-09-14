@@ -5,9 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"myGinServer/api/request"
 	"myGinServer/api/response"
 	"myGinServer/models/dispatch"
 	"sync"
+
+	"github.com/google/uuid"
 )
 
 var (
@@ -18,6 +21,10 @@ var (
 const (
 	OdsDatasourceId = "615966d0-af61-11f1-8f44-866b84548888"
 )
+
+func init() {
+	// todo 读取数据库中的未结束的exec_queue中的数据写入到channel对象中。
+}
 
 type TestRunEntity struct {
 	Sql   string
@@ -135,4 +142,57 @@ func (n *NodeServer) runSQL(ctx context.Context, entity TestRunEntity) {
 	if err != nil {
 		fmt.Println(err.Error())
 	}
+}
+
+func (n *NodeServer) InstanceCreate(ctx context.Context, event request.InstanceCreateReq) error {
+	// 根据节点的DAG创建对应实例数据，需要根据schedule的cron进行解析,并将根节点发送到队列中。
+	exists, err2 := n.store.InstanceExists(ctx, event.Project, event.BatchId())
+	if err2 != nil {
+		return err2
+	}
+	if exists {
+		return nil
+	}
+
+	lines, err := n.store.ListLines(ctx, event.Project)
+	if err != nil {
+		return err
+	}
+	builder := NewInstanceDAGBuilder(event.Id, event.BatchId(), n.store)
+	dag, _, err := builder.Build(lines)
+	if err != nil {
+		return err
+	}
+	err = dag.Parser(event.BizDate)
+	if err != nil {
+		return err
+	}
+	err = n.batchCreateInstance(ctx, dag)
+	return err
+}
+
+func (n *NodeServer) batchCreateInstance(ctx context.Context, dag NodeDAG) error {
+	// 写入数据库
+	depends := dag.BuildInstanceDepend()
+	var depend []dispatch.InstanceLine
+	for behindID, aheadIds := range depends {
+		if len(aheadIds) == 0 {
+			continue
+		}
+		for _, aheadID := range aheadIds {
+			depend = append(depend, dispatch.InstanceLine{
+				Id:      uuid.New().String(),
+				Ahead:   aheadID,
+				Behind:  behindID,
+				BatchId: dag.BatchId,
+			})
+		}
+	}
+	nodes := dag.GetInstanceList()
+	err := n.store.BatchCreateInstance(ctx, "", depend, nodes)
+	if err != nil {
+		return err
+	}
+	// todo 写入根实例ID到延时队列。
+	return nil
 }
