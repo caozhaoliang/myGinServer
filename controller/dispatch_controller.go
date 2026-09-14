@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"context"
 	"myGinServer/api/request"
 	"myGinServer/config"
 	"myGinServer/internal/store/dispatch"
@@ -30,6 +31,7 @@ func NewDispatchController(config *config.Config) *DispatchController {
 	})
 
 	nodeServer := dispatchserver.NewNodeServer(iStore)
+	nodeServer.Dispatch(context.TODO())
 	return &DispatchController{nodeServer: nodeServer}
 }
 
@@ -74,6 +76,38 @@ func (s *DispatchController) Graph(c *gin.Context) {
 	}
 	SendSuccess(c, &r)
 }
+func (s *DispatchController) TestRun(c *gin.Context) {
+	var req request.TestRunSqlReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		SendError(c, http.StatusBadRequest, err)
+		return
+	}
+	err := s.nodeServer.TestRun(c, req)
+	if err != nil {
+		SendError(c, http.StatusInternalServerError, errors.Wrap(err, "测试运行失败"))
+		return
+	}
+	SendSuccess(c, "ok")
+}
+
+func (s *DispatchController) QueryResult(c *gin.Context) {
+	type QueryResultReq struct {
+		RunId string `json:"run_id" form:"run_id"`
+	}
+	var req QueryResultReq
+	if err := c.ShouldBindQuery(&req); err != nil {
+		SendError(c, http.StatusBadRequest, err)
+		return
+	}
+	r, err := s.nodeServer.QueryTestResult(c, req.RunId)
+	if err != nil {
+		SendError(c, http.StatusInternalServerError, errors.Wrap(err, "运行结果获取失败"))
+		return
+	}
+	SendSuccess(c, r)
+}
+
+// ------datasource ------
 
 func (s *DispatchController) SaveDatasource(c *gin.Context) {
 	var req request.DatasourceReq
@@ -133,11 +167,11 @@ func (s *DispatchController) MetaColumns(c *gin.Context) {
 }
 
 const (
-	odsDatasourceId = "615966d0-af61-11f1-8f44-866b84548888"
+	OdsDatasourceId = "615966d0-af61-11f1-8f44-866b84548888"
 )
 
 func (s *DispatchController) OdsTables(c *gin.Context) {
-	tables, err := s.nodeServer.MetaTables(c, odsDatasourceId)
+	tables, err := s.nodeServer.MetaTables(c, OdsDatasourceId)
 	if err != nil {
 		SendError(c, http.StatusInternalServerError, errors.Wrap(err, ""))
 		return
@@ -153,7 +187,7 @@ func (s *DispatchController) OdsColumns(c *gin.Context) {
 		SendError(c, http.StatusBadRequest, errors.Wrap(err, "获取参数失败"))
 		return
 	}
-	tables, err := s.nodeServer.MetaColumns(c, odsDatasourceId, req.Table)
+	tables, err := s.nodeServer.MetaColumns(c, OdsDatasourceId, req.Table)
 	if err != nil {
 		SendError(c, http.StatusInternalServerError, errors.Wrap(err, ""))
 		return

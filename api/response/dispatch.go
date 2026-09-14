@@ -20,3 +20,10 @@ type MetaColumns struct {
 
 	PrimaryKeySeq int `json:"primary_key_seq"`
 }
+
+type TestRunResp struct {
+	Msg    string                   `json:"msg"`
+	Sql    string                   `json:"sql"`
+	Header []string                 `json:"header"`
+	Body   []map[string]interface{} `json:"body"`
+}

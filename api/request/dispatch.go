@@ -23,3 +23,13 @@ type DatasourceReq struct {
 	Type    string `json:"type" binding:"required"`
 	ConnStr string `json:"conn_str" binding:"required"`
 }
+
+// ----测试运行 ----
+
+// TestRunSqlReq 测试运行请求体
+type TestRunSqlReq struct {
+	RunId  string                 `json:"run_id" binding:"run_id"`
+	Sql    string                 `json:"sql" binding:"required"`
+	Params map[string]interface{} `json:"params" binding:"required"`
+	Type   string                 `json:"type"`
+}

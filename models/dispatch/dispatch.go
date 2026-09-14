@@ -24,6 +24,16 @@ var (
 	Solid  LineType = "Solid"  // 实线
 )
 
+type ExecStatus string
+
+var (
+	Pending ExecStatus = "pending"
+	Loading ExecStatus = "loading"
+	Running ExecStatus = "running"
+	Success ExecStatus = "success"
+	Failed  ExecStatus = "failed"
+)
+
 type Nodes struct {
 	Id        string         `json:"id" gorm:"column:id;primaryKey;type:VARCHAR(64);not null;comment:主键ID"`                             // 主键ID
 	Code      string         `json:"code" gorm:"column:code;type:VARCHAR(64);not null;default:;comment:节点编码"`                           // 节点编码
@@ -67,4 +77,26 @@ type Datasource struct {
 
 func (d *Datasource) TableName() string {
 	return "datasource"
+}
+
+// 执行队列表
+type ExecQueue struct {
+	Id        string         `gorm:"column:id;type:varchar(64);primary_key;comment:ID" json:"id"`
+	RunId     string         `gorm:"column:run_id;type:varchar(32);comment:任务运行ID;NOT NULL" json:"run_id"`
+	Status    string         `gorm:"column:status;type:varchar(32);default:pending;comment:状态：pending、loading、running、success、failed;NOT NULL" json:"status"`
+	Content   string         `gorm:"column:content;type:mediumtext;comment:运行内容" json:"content"`
+	Response  string         `gorm:"column:response;type:mediumtext;comment:响应内容" json:"response"`
+	CreatedOn sql.NullTime   `gorm:"column:created_on;type:datetime;comment:创建时间" json:"created_on"`
+	CreatedBy sql.NullString `gorm:"column:created_by;type:varchar(64);comment:创建人ID" json:"created_by"`
+}
+
+func EntityFinished(status string) bool {
+	return status == "success" || status == "failed"
+}
+func EntityAlreadyRun(status string) bool {
+	return status == "running" || EntityFinished(status)
+}
+
+func (m *ExecQueue) TableName() string {
+	return "exec_queue"
 }

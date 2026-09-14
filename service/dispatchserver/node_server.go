@@ -3,6 +3,9 @@ package dispatchserver
 import (
 	"context"
 	"database/sql"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
 	"myGinServer/api/request"
 	"myGinServer/api/response"
 	"myGinServer/internal/store/dispatch"
@@ -10,6 +13,7 @@ import (
 	"myGinServer/utils"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 )
 
@@ -102,4 +106,53 @@ func (n *NodeServer) Graph(ctx context.Context) (response.Graph, error) {
 	}
 
 	return response.Graph{Nodes: nodeReq, Lines: lineReq}, nil
+}
+
+func (n *NodeServer) TestRun(ctx context.Context, req request.TestRunSqlReq) error {
+	// 1.根据runId 做幂等校验 2.base64解码Sql字段 3.SQL参数替换 4.写入待执行队列(exec_queue表)
+	exists, err := n.store.ExecQueueExists(ctx, "", req.RunId)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return nil
+	}
+
+	decoded, err := base64.StdEncoding.DecodeString(req.Sql)
+	if err != nil {
+		return errors.Wrapf(err, "SQL解码失败")
+	}
+	template, err := utils.RenderTemplate(string(decoded), req.Params)
+	if err != nil {
+		return errors.Wrapf(err, "参数替换失败")
+	}
+	err = n.store.SaveExecQueue(ctx, "", mdispatch.ExecQueue{
+		Id:        uuid.New().String(),
+		RunId:     req.RunId,
+		Status:    string(mdispatch.Pending),
+		Content:   fmt.Sprintf("{\"sql\":\"%s\"}", template),
+		Response:  "{}",
+		CreatedOn: sql.NullTime{time.Now(), true},
+		CreatedBy: sql.NullString{"admin", true},
+	})
+	if err == nil {
+		n.SendEntity(req.RunId, template)
+	}
+	return err
+}
+
+func (n *NodeServer) QueryTestResult(ctx context.Context, runId string) (response.TestRunResp, error) {
+	// 获取exec_queue中的response字段并解析 返回结果。
+	queue, err := n.store.QueryExecQueue(ctx, "", runId)
+	if err != nil {
+		return response.TestRunResp{}, err
+	}
+	var resp response.TestRunResp
+	if mdispatch.EntityFinished(queue.Status) {
+		err = json.Unmarshal([]byte(queue.Response), &resp)
+		if err != nil {
+			return response.TestRunResp{}, err
+		}
+	}
+	return resp, nil
 }

@@ -91,3 +91,54 @@ func (s *Store) GetDatasource(ctx context.Context, project string, id string) (d
 	}
 	return ds, nil
 }
+
+func (s *Store) ExecQueueExists(ctx context.Context, project, runId string) (bool, error) {
+	db, err := s.saas.GetDB(ctx, project)
+	if err != nil {
+		return false, err
+	}
+	var count int64
+	err = db.Model(&dispatch.ExecQueue{}).Where("run_id = ?", runId).Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+func (s *Store) SaveExecQueue(ctx context.Context, project string, entity dispatch.ExecQueue) error {
+	db, err := s.saas.GetDB(ctx, project)
+	if err != nil {
+		return err
+	}
+	err = db.Save(&entity).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Store) QueryExecQueue(ctx context.Context, project string, runId string) (*dispatch.ExecQueue, error) {
+	db, err := s.saas.GetDB(ctx, project)
+	if err != nil {
+		return nil, err
+	}
+	var queue dispatch.ExecQueue
+	err = db.Where("run_id=?", runId).First(&queue).Error
+	if err != nil {
+		return nil, err
+	}
+	return &queue, nil
+}
+
+func (s *Store) UpdateExecQueueResp(ctx context.Context, project, runId, resp, status string) error {
+	db, err := s.saas.GetDB(ctx, project)
+	if err != nil {
+		return err
+	}
+	err = db.Model(&dispatch.ExecQueue{}).Where("run_id=?", runId).
+		Updates(&dispatch.ExecQueue{Status: status, Response: resp}).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}
