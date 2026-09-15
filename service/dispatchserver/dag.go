@@ -209,7 +209,9 @@ func (n *NodeDAG) Parser(bizDate string) error {
 	start := getStartTime(bizDate)
 
 	for _, node := range n.Nodes {
-		times, err := utils.GetSchedulesBetween(node.Data.Schedule, start, start.Add(time.Hour*24).Add(-1*time.Second))
+		// 区间为 [start, end)，右端直接取次日零点，由半开区间自然排除次日零点这一次触发；
+		// 用 AddDate 而非 Add(24h)，跨夏令时切换时仍能稳定落在次日零点。
+		times, err := utils.GetSchedulesBetween(node.Data.Schedule, start, start.AddDate(0, 0, 1))
 		if err != nil {
 			return errors.Wrap(err, "解析 cron表达式错误")
 		}
@@ -234,10 +236,13 @@ func (n *NodeDAG) GetInstanceList() []dispatch.NodeInstance {
 	return nodeInstances
 }
 
-func (n *NodeDAG) GetInstanceById(id string) dispatch.NodeInstance {
+// GetInstanceById 取节点的首个实例。第二个返回值为 false 表示节点不存在，
+// 或其 cron 表达式在本批次窗口内合法地没有产生任何实例（如 0 0 * * 1 落在非周一），
+// 调用方必须显式处理，不能拿着零值继续往下走。
+func (n *NodeDAG) GetInstanceById(id string) (dispatch.NodeInstance, bool) {
 	node, ok := n.Nodes[id]
-	if !ok {
-		return dispatch.NodeInstance{}
+	if !ok || len(node.Data.instances) == 0 {
+		return dispatch.NodeInstance{}, false
 	}
-	return node.Data.instances[0]
+	return node.Data.instances[0], true
 }

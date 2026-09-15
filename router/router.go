@@ -127,6 +127,7 @@ func NewRouter(controller *controller.UserController,
 		dispatchApi.DELETE("/node", dispatch.DeleteNode)
 		dispatchApi.GET("/graph", dispatch.Graph)
 		dispatchApi.POST("/test_run", dispatch.TestRun)
+		dispatchApi.GET("/query_result", dispatch.QueryResult)
 	}
 	dsApi := r.Group("/api/datasource")
 	{

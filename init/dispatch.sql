@@ -44,12 +44,12 @@ CREATE TABLE IF NOT EXISTS `datasource` (
     KEY `idx_code` (`code`)
 )ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='数据源表';
 insert into datasource(id,code,name,`type`,conn_str,created_on,created_by)
-values ("615966d0-af61-11f1-8f44-866b84548888", "default","default", "mysql","{}",now(),"admin")
+values ("615966d0-af61-11f1-8f44-866b84548888", "default","default", "mysql","{}",now(),"admin");
 
 CREATE TABLE IF NOT EXISTS `exec_queue` (
     `id` VARCHAR(64) NOT NULL COMMENT 'ID',
     `run_id` VARCHAR(32) NOT NULL COMMENT '任务运行ID',
-    `status` VARCHAR(32) NOT NULL DEFAULT 'pending' COMMENT '状态：pending\loading\running\success\failed'
+    `status` VARCHAR(32) NOT NULL DEFAULT 'pending' COMMENT '状态：pending\loading\running\success\failed',
     `content` MEDIUMTEXT COMMENT '运行内容',
     `response` MEDIUMTEXT COMMENT '响应内容',
     `created_on` DATETIME DEFAULT NULL COMMENT '创建时间',
@@ -65,8 +65,8 @@ CREATE TABLE IF NOT EXISTS `node_instance` (
     `name`  VARCHAR(32) NOT NULL COMMENT '名称',
     `index` tinyint(4) NOT NULL DEFAULT 0 COMMENT '批次内节点实例索引',
     `execute_time` timestamp NOT NULL COMMENT '预期执行时间',
-    `start_time` timestamp NOT NULL COMMENT '开始执行时间',
-    `end_time` timestamp NOT NULL COMMENT '执行结束时间',
+    `start_time` timestamp NULL DEFAULT NULL COMMENT '开始执行时间，实例创建时为 NULL',
+    `end_time` timestamp NULL DEFAULT NULL COMMENT '执行结束时间，未结束时为 NULL',
     `status`    VARCHAR(32) NOT NULL DEFAULT 'NotReady' COMMENT '状态',
     `batch_id`  VARCHAR(32)  NOT NULL COMMENT '批次ID',
     `created_on` DATETIME DEFAULT NULL COMMENT '创建时间',
@@ -90,6 +90,8 @@ CREATE TABLE IF NOT EXISTS `instance_line` (
 CREATE TABLE delay_queue (
                              id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
                              biz_id       VARCHAR(64)     NOT NULL COMMENT '业务关联ID',
+                             topic        VARCHAR(64)     NOT NULL COMMENT '主题',
+                             max_retry    int(32)         NOT NULL DEFAULT 3 COMMENT '最大重试次数',
                              execute_time DATETIME(3)     NOT NULL COMMENT '期望执行时间',
                              status       TINYINT         NOT NULL DEFAULT 0 COMMENT '0待处理,1处理中,2成功,3失败',
                              payload      JSON            NULL COMMENT '消息体',

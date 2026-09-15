@@ -120,17 +120,18 @@ var (
 
 // 节点实例表
 type NodeInstance struct {
-	Id          string         `gorm:"column:id;type:varchar(64);primary_key;comment:ID" json:"id"`
-	NodeId      string         `gorm:"column:node_id;type:varchar(32);comment:节点id;NOT NULL" json:"node_id"`
-	Name        string         `gorm:"column:name;type:varchar(32);comment:名称;NOT NULL" json:"name"`
-	Index       int            `gorm:"column:index;type:tinyint(4);default:0;comment:批次内节点实例索引;NOT NULL" json:"index"`
-	ExecuteTime sql.NullTime   `gorm:"column:execute_time;type:timestamp;comment:预期执行时间;NOT NULL" json:"execute_time"`
-	StartTime   sql.NullTime   `gorm:"column:start_time;type:timestamp;comment:开始执行时间;NOT NULL" json:"start_time"`
-	EndTime     sql.NullTime   `gorm:"column:end_time;type:timestamp;comment:执行结束时间;NOT NULL" json:"end_time"`
-	Status      string         `gorm:"column:status;type:varchar(32);default:NotReady;comment:状态;NOT NULL" json:"status"`
-	BatchId     string         `gorm:"column:batch_id;type:varchar(32);comment:批次ID;NOT NULL" json:"batch_id"`
-	CreatedOn   sql.NullTime   `gorm:"column:created_on;type:datetime;comment:创建时间" json:"created_on"`
-	CreatedBy   sql.NullString `gorm:"column:created_by;type:varchar(64);comment:创建人ID" json:"created_by"`
+	Id          string       `gorm:"column:id;type:varchar(64);primary_key;comment:ID" json:"id"`
+	NodeId      string       `gorm:"column:node_id;type:varchar(32);comment:节点id;NOT NULL" json:"node_id"`
+	Name        string       `gorm:"column:name;type:varchar(32);comment:名称;NOT NULL" json:"name"`
+	Index       int          `gorm:"column:index;type:tinyint(4);default:0;comment:批次内节点实例索引;NOT NULL" json:"index"`
+	ExecuteTime sql.NullTime `gorm:"column:execute_time;type:timestamp;comment:预期执行时间;NOT NULL" json:"execute_time"`
+	// start_time / end_time 可空：实例在创建时尚未开始执行，结束时间更是要等执行完成才回填。
+	StartTime sql.NullTime   `gorm:"column:start_time;type:timestamp;comment:开始执行时间" json:"start_time"`
+	EndTime   sql.NullTime   `gorm:"column:end_time;type:timestamp;comment:执行结束时间" json:"end_time"`
+	Status    string         `gorm:"column:status;type:varchar(32);default:NotReady;comment:状态;NOT NULL" json:"status"`
+	BatchId   string         `gorm:"column:batch_id;type:varchar(32);comment:批次ID;NOT NULL" json:"batch_id"`
+	CreatedOn sql.NullTime   `gorm:"column:created_on;type:datetime;comment:创建时间" json:"created_on"`
+	CreatedBy sql.NullString `gorm:"column:created_by;type:varchar(64);comment:创建人ID" json:"created_by"`
 }
 
 func (m *NodeInstance) TableName() string {

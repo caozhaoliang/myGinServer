@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"myGinServer/api/request"
 	"myGinServer/api/response"
 	"myGinServer/models/dispatch"
@@ -48,7 +47,9 @@ func (n *NodeServer) SendEntity(ctx context.Context, runId, sql string) error {
 }
 
 func (n *NodeServer) Dispatch(ctx context.Context) {
-	c := cron.New()
+	// cron.New 默认使用空链，任务函数内的 panic 会直接终止整个进程；
+	// 显式挂上 Recover，把 panic 限制在单次调度内。
+	c := cron.New(cron.WithChain(cron.Recover(cron.DefaultLogger)))
 	// 先启动调度器
 	c.Start()
 	// 运行时动态添加任务（调度器已在运行，依然生效）
@@ -105,20 +106,18 @@ func (n *NodeServer) runSQL(ctx context.Context, entity TestRunEntity) {
 	mu.Unlock()
 	content, err := n.getDatasourceContent(ctx, OdsDatasourceId)
 	if err != nil {
-		log.Fatalf("获取ods数据源信息失败:%s", err.Error())
 		return
 	}
 	// 打开目标数据库连接
 	db, err := openTargetDB(content)
 	if err != nil {
-		log.Fatalf("打开数据库连接失败：%s", err.Error())
 		return
 	}
 	defer db.Close()
 
 	resp := response.TestRunResp{}
 	status := "success"
-	rows, err := db.QueryContext(ctx, entity.RunId)
+	rows, err := db.QueryContext(ctx, entity.Sql)
 	if err != nil {
 		resp.Msg = err.Error()
 	} else {
@@ -157,7 +156,7 @@ func (n *NodeServer) runSQL(ctx context.Context, entity TestRunEntity) {
 				resp.Msg = err.Error()
 			} else {
 				resp.Body = body
-				resp.Sql = entity.RunId
+				resp.Sql = entity.Sql
 				resp.Msg = "success"
 			}
 		}
@@ -221,9 +220,15 @@ func (n *NodeServer) batchCreateInstance(ctx context.Context, rootId string, dag
 	if err != nil {
 		return err
 	}
-	instance := dag.GetInstanceById(rootId)
-	delaySec := instance.ExecuteTime.Time.Second() - time.Now().Second()
+	instance, ok := dag.GetInstanceById(rootId)
+	if !ok {
+		return fmt.Errorf("根节点 %s 在本批次窗口内未生成实例，请检查其 cron 表达式的调度时间", rootId)
+	}
+	// 延迟时长取「距预期执行时间的剩余间隔」，不能用 Second() 相减：
+	// Second() 只是分钟内的秒序号，相减得到的不是时间差。
+	// 若预期执行时间已过，time.Until 返回负值，Producer 会落一条过去的 execute_time，消费端立即取走。
+	delay := time.Until(instance.ExecuteTime.Time)
 	// 写入根实例ID到延时队列。
-	err = n.producer.Publish(ctx, dispatch.NodeInstanceTopic, rootId, instance.Id, time.Second*time.Duration(delaySec))
+	err = n.producer.Publish(ctx, dispatch.NodeInstanceTopic, rootId, instance.Id, delay)
 	return err
 }

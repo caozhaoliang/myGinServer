@@ -17,8 +17,10 @@ type NodeRuntime struct {
 	producer *delayqueue.Producer
 }
 
-func NewNodeRuntime(saas dispatch.StoreIface, consumer *delayqueue.Consumer) *NodeRuntime {
-	return &NodeRuntime{saas: saas, consumer: consumer}
+func NewNodeRuntime(saas dispatch.StoreIface,
+	producer *delayqueue.Producer,
+	consumer *delayqueue.Consumer) *NodeRuntime {
+	return &NodeRuntime{saas: saas, producer: producer, consumer: consumer}
 }
 
 func (c *NodeRuntime) Dispatch(topic string) error {
@@ -84,8 +86,9 @@ func (c *NodeRuntime) tryNextInstances(ctx context.Context, reqCtx *RuntimeCtx) 
 	}
 	successBehindIds := getAlreadyInfo(rows)
 	for k, v := range successBehindIds {
-		delaySec := v.Second() - time.Now().Second()
-		err = c.producer.Publish(ctx, mdispatch.NodeInstanceTopic, k, k, time.Second*time.Duration(delaySec))
+		// 同 dispatch.go：Second() 是分钟内的秒序号，相减得不到时间差；
+		// 直接用「距预期执行时间的剩余间隔」，预期时间已过时返回负值，消费端会立即取走。
+		err = c.producer.Publish(ctx, mdispatch.NodeInstanceTopic, k, k, time.Until(v))
 		if err != nil {
 			return errors.Wrap(err, "投递延时队列失败")
 		}

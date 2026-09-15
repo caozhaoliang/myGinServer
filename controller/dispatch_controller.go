@@ -39,12 +39,14 @@ func NewDispatchController(ctx context.Context, config *config.Config) *Dispatch
 	}
 	producer := delayqueue.NewProducer(db)
 	consumer := delayqueue.NewConsumer(db)
-	consumer.StartWorkers(ctx, 4)
-	runtime := workflow.NewNodeRuntime(iStore, consumer)
+	runtime := workflow.NewNodeRuntime(iStore, producer, consumer)
+	// 必须先 Dispatch（内部 Register 注册 handler）再 StartWorkers：
+	// worker 的 ticker 如果先跑起来，启动瞬间队列里已有的到期消息会因为取不到 handler 被直接判 failed。
 	err = runtime.Dispatch(mdispatch.NodeInstanceTopic)
 	if err != nil {
 		panic(err)
 	}
+	consumer.StartWorkers(ctx, 4)
 	nodeServer := dispatchserver.NewNodeServer(iStore, producer)
 	nodeServer.Dispatch(ctx)
 	return &DispatchController{nodeServer: nodeServer}

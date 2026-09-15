@@ -14,7 +14,10 @@ import (
 type Handler func(ctx context.Context, msg *DelayMessage) error
 
 type Consumer struct {
-	db       *gorm.DB
+	db *gorm.DB
+	// mu 保护 handlers：Register 通常发生在启动阶段，而 worker goroutine 已可能在读，
+	// 二者无锁并发会构成数据竞争。
+	mu       sync.RWMutex
 	handlers map[string]Handler // topic -> handler
 	interval time.Duration
 	stopCh   chan struct{}
@@ -32,12 +35,34 @@ func NewConsumer(db *gorm.DB) *Consumer {
 
 // Register 注册某类任务的处理器
 func (c *Consumer) Register(topic string, h Handler) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.handlers[topic] = h
+}
+
+// lookupHandler 并发安全地取出 topic 对应的处理器
+func (c *Consumer) lookupHandler(topic string) (Handler, bool) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	h, ok := c.handlers[topic]
+	return h, ok
+}
+
+// callHandler 隔离执行 handler，把 panic 收敛成单次调用的 error。
+// worker goroutine 处于进程顶层，上方没有 recover，handler 内一旦 panic 会终止整个进程；
+// 在这里兜住之后，panic 只会让当前这条消息按失败重试。
+func (c *Consumer) callHandler(ctx context.Context, msg *DelayMessage, h Handler) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("handler panic: %v", r)
+		}
+	}()
+	return h(ctx, msg)
 }
 
 // processOne 处理一条消息
 func (c *Consumer) processOne(ctx context.Context, msg *DelayMessage) {
-	handler, ok := c.handlers[msg.Topic]
+	handler, ok := c.lookupHandler(msg.Topic)
 	if !ok {
 		c.markFailed(ctx, msg, fmt.Errorf("no handler for topic %s", msg.Topic))
 		return
@@ -47,7 +72,7 @@ func (c *Consumer) processOne(ctx context.Context, msg *DelayMessage) {
 	execCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	if err := handler(execCtx, msg); err != nil {
+	if err := c.callHandler(execCtx, msg, handler); err != nil {
 		c.handleRetry(ctx, msg, err)
 		return
 	}

@@ -27,19 +27,25 @@ func GetSchedulesBetween(cronSpec string, start, end time.Time) ([]time.Time, er
 	}
 
 	var times []time.Time
-	current := start
+	// 2. 起点回退 1 秒再截断到整秒：
+	//    cron 的 Next 返回的是「严格大于」入参的时间点，若直接用 start 起步，
+	//    恰好落在 start 上的触发（如 0 0 * * * 落在窗口左侧的午夜整点）会被永久跳过。
+	//    回退 1 秒后 Next 就能把 start 本身返回，使区间语义与 [start, end) 一致。
+	current := start.Truncate(time.Second).Add(-time.Second)
 
 	for {
-		// 2. 计算下一个触发时间
+		// 3. 计算下一个触发时间
 		next := schedule.Next(current)
 
-		// 3. 终止条件：没有下一次，或者已超出结束时间
+		// 4. 终止条件：没有下一次，或者已到达/越过右端（右端为开区间）
 		if next.IsZero() || !next.Before(end) {
 			break
 		}
 
-		// 4. 收集并步进
-		times = append(times, next)
+		// 5. 兜底：回退起步可能引入早于 start 的触发点，此处剔除，保证左端确为闭区间
+		if !next.Before(start) {
+			times = append(times, next)
+		}
 		current = next
 	}
 

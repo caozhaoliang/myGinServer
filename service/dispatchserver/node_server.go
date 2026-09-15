@@ -131,7 +131,7 @@ func (n *NodeServer) TestRun(ctx context.Context, req request.TestRunSqlReq) err
 
 	decoded, err := base64.StdEncoding.DecodeString(req.Sql)
 	if err != nil {
-		return errors.Wrapf(err, "SQL解码失败")
+		return errors.Wrapf(err, "SQL 解码失败")
 	}
 	template, err := utils.RenderTemplate(string(decoded), req.Params)
 	if err != nil {

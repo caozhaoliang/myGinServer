@@ -15,6 +15,9 @@
 `/api/dispatch/*` 与 `/api/datasource/*` 路由组**均未挂载 JWT 中间件**，即调用时**无需携带 `Authorization` 请求头**，可直接访问。
 （与其他 `/api/*` 业务接口不同，后者需要 JWT 认证。）
 
+> ⚠️ **安全提示**：由于无鉴权，且 `GET /api/datasource/list` 会原样返回 `conn_str`（内含数据库账号与明文密码），
+> 当前这些接口在公网可被任意调用。上线前需为该路由组补挂鉴权中间件，并对 `conn_str` 做脱敏。
+
 ### 1.3 请求与响应编码
 
 - 请求体：`Content-Type: application/json`
@@ -97,15 +100,30 @@
 
 ## 3. 接口列表
 
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | `/api/dispatch/node` | 保存 / 新增节点（UPSERT） |
-| POST | `/api/dispatch/line` | 保存 / 新增连线（含成环校验） |
-| GET | `/api/dispatch/graph` | 获取整个图（全部节点 + 连线） |
-| POST | `/api/datasource/save` | 保存 / 新增数据源（UPSERT） |
-| GET | `/api/datasource/list` | 获取数据源列表 |
-| GET | `/api/datasource/tables` | 按数据源 ID 获取表列表 |
-| GET | `/api/datasource/columns` | 按数据源 ID + 表名获取列列表 |
+### 3.1 调度接口（/api/dispatch/*）
+
+| 方法 | 路径 | 说明 | 文档 |
+|------|------|------|------|
+| POST | `/api/dispatch/node` | 保存 / 新增节点（UPSERT） | §4 |
+| DELETE | `/api/dispatch/node` | 逻辑删除节点 | §4.5 |
+| POST | `/api/dispatch/line` | 保存 / 新增连线（含成环校验） | §5 |
+| DELETE | `/api/dispatch/line` | 逻辑删除连线 | §5.4 |
+| GET | `/api/dispatch/graph` | 获取整个图（全部节点 + 连线） | §6 |
+| POST | `/api/dispatch/test_run` | 节点测试运行（提交 SQL 异步执行） | §7 |
+| GET | `/api/dispatch/query_result` | 查询测试运行结果（**当前未挂载路由**） | §7.4 |
+
+### 3.2 数据源接口（/api/datasource/*）
+
+| 方法 | 路径 | 说明 | 文档 |
+|------|------|------|------|
+| POST | `/api/datasource/save` | 保存 / 新增数据源（UPSERT） | §8.1 |
+| GET | `/api/datasource/list` | 获取数据源列表 | §8.2 |
+| GET | `/api/datasource/tables` | 按数据源 ID 获取表列表 | §8.3 |
+| GET | `/api/datasource/columns` | 按数据源 ID + 表名获取列列表 | §8.4 |
+| GET | `/api/datasource/ods/tables` | 获取 ODS 表列表（数据源 ID 由后端固定） | §8.5 |
+| GET | `/api/datasource/ods/columns` | 按表名获取 ODS 列列表 | §8.6 |
+
+> `DELETE` 方法用于删除接口，这是本模块唯一使用 DELETE 的场景（路由 `dispatchApi.DELETE("/node")` / `dispatchApi.DELETE("/line")`）。
 
 ---
 
@@ -118,7 +136,7 @@
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| id | string | 否 | 节点主键 ID（唯一）。有值则更新，为空则新增 |
+| id | string | 是 | 节点主键 ID（唯一），保存逻辑为**按主键 upsert**。新增时也**必须**由前端生成 UUID 传入：后端没有「为空则生成」的兜底，传空串会以空主键 INSERT，第二次提交即主键冲突 |
 | code | string | 是 | 节点编码 |
 | name | string | 是 | 节点名称 |
 | content | string | 否 | 节点内容，为 JSON 字符串（结构见 4.3） |
@@ -272,6 +290,44 @@ type CollectNodeContent struct {
 }
 ```
 
+### 4.5 DELETE /api/dispatch/node —— 删除节点
+
+逻辑删除（软删除）：将节点的 `deleted` 字段置为 `1`，数据仍保留在库中，`/api/dispatch/graph` 不再返回。
+
+#### 4.5.1 请求参数（Query）
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| id | string | 是 | 要删除的节点 ID |
+
+> 注意：`id` 未做 `required` 校验。若缺失或传空字符串，接口仍返回成功（`data: "ok"`），但实际不会更新任何行。前端需自行保证传值。
+
+#### 4.5.2 请求示例
+
+```
+DELETE /api/dispatch/node?id=node-001
+```
+
+#### 4.5.3 响应示例
+
+**成功**：
+
+```json
+{
+  "code": 200,
+  "data": "ok"
+}
+```
+
+**失败（服务异常）**：
+
+```json
+{
+  "code": 500,
+  "message": "错误信息"
+}
+```
+
 ---
 
 ## 5. POST /api/dispatch/line —— 保存连线
@@ -282,7 +338,7 @@ type CollectNodeContent struct {
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| id | string | 否 | 连线 ID（唯一）。有值则更新，为空则新增 |
+| id | string | 是 | 连线 ID（唯一），保存逻辑为按主键 upsert。同 §4.1，新增时也必须传入前端生成的 UUID |
 | ahead_id | string | 是 | 前驱节点 ID |
 | behind_id | string | 是 | 后继节点 ID |
 | type | string | 是 | 连线类型，取值见 2.2 |
@@ -324,6 +380,44 @@ type CollectNodeContent struct {
 {
   "code": 500,
   "message": "成环异常: node-002->node-001"
+}
+```
+
+### 5.4 DELETE /api/dispatch/line —— 删除连线
+
+逻辑删除（软删除）：将连线的 `deleted` 字段置为 `1`。删除后该连线不再参与 `/api/dispatch/graph` 渲染与成环校验。
+
+#### 5.4.1 请求参数（Query）
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| id | string | 是 | 要删除的连线 ID |
+
+> 与删除节点相同，`id` 未做 `required` 校验，传空会「成功但无实际影响」。
+
+#### 5.4.2 请求示例
+
+```
+DELETE /api/dispatch/line?id=line-001
+```
+
+#### 5.4.3 响应示例
+
+**成功**：
+
+```json
+{
+  "code": 200,
+  "data": "ok"
+}
+```
+
+**失败（服务异常）**：
+
+```json
+{
+  "code": 500,
+  "message": "错误信息"
 }
 ```
 
@@ -411,25 +505,214 @@ type CollectNodeContent struct {
 
 ---
 
-## 7. 数据源接口（api/datasource/*）
+## 7. 节点测试运行接口（/api/dispatch/test_run）
 
-数据源用于为采集节点（`Collect`）提供连接信息，路由同样未挂 JWT。
+用于在调度流程之外**试跑一段 SQL**，校验 SQL 与参数是否正确。
 
-### 7.1 POST /api/datasource/save —— 保存数据源
+该接口为**异步**接口：提交后立即返回 `ok`，SQL 的实际执行结果需要另行查询（见 7.6）。
 
-根据 `id` 判断新增或更新。保存时自动补充：`created_on`、`created_by=admin`。
+> ✅ **当前版本该接口可用**：`RunId` 上曾有的 `binding:"run_id"`（会触发 validator 内部 `panic` 拖垮进程）已改为
+> `binding:"required"`；执行链路也曾把 `entity.RunId` 当作 SQL 执行，现已改为 `entity.Sql`。
+> 相关历史缺陷（D1、D3、D15）均已修复，可正常联调。
 
-#### 7.1.1 请求参数（Body，JSON）
+### 7.1 请求参数（Body，JSON）
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| id | string | 否 | 数据源 ID（唯一）。有值则更新，为空则新增 |
+| run_id | string | 是 | 本次运行的唯一 ID，**幂等键**。相同 `run_id` 重复提交只会执行一次 |
+| sql | string | 是 | **Base64 编码**的 SQL 模板（不是明文 SQL） |
+| params | object | 是 | SQL 模板参数，用于替换 SQL 中的 `{{key}}` 占位符。**不可缺省**（缺省返回 400）；但传空对象 `{}` 可以通过校验，此时模板中若有占位符会在渲染阶段报「参数缺失」 |
+| type | string | 否 | 预留字段，当前不参与逻辑 |
+
+> `run_id` 建议使用 UUID。该字段对应 `exec_queue.run_id`（`VARCHAR(32)` 且带唯一索引），超长或重复都会写库失败。
+
+### 7.2 SQL 模板与参数规则
+
+`sql` 字段需先做 Base64 编码，服务端解码后再按 `{{key}}` 占位符替换。值会按类型转成 SQL 字面量：
+
+| 参数类型 | 渲染结果 |
+|----------|----------|
+| string | `'abc'`（自动加单引号并转义） |
+| number / bool | 直接输出（bool 转 1/0） |
+| null | `NULL` |
+| 表名/列名（需后端标记为 Identifier） | `` `tbl` ``（反引号包裹） |
+
+占位符缺少对应参数时会直接报错，不会静默生成错误 SQL。
+
+**明文 SQL 示例（编码前）**：
+
+```sql
+SELECT * FROM orders WHERE dt = '{{dt}}' AND id = {{id}} LIMIT 10
+```
+
+对应 `params`：
+
+```json
+{ "dt": "2026-09-15", "id": 1001 }
+```
+
+### 7.3 请求示例
+
+```json
+{
+  "run_id": "a3f1c2d4-0001-4f2b-9c31-8e7d6a5b4c3d",
+  "sql": "U0VMRUNUICogRlJPTSBvcmRlcnMgV0hFUkUgZHQgPSAne3tkdH19JyBMSU1JVCAxMA==",
+  "params": { "dt": "2026-09-15" },
+  "type": "SQL"
+}
+```
+
+### 7.4 响应示例
+
+**成功（已受理，非执行完成）**：
+
+```json
+{
+  "code": 200,
+  "data": "ok"
+}
+```
+
+**失败（参数校验不通过）**：
+
+```json
+{
+  "code": 400,
+  "message": "..."
+}
+```
+
+**失败（SQL 解码 / 参数替换 / 入队异常）**：
+
+```json
+{
+  "code": 500,
+  "message": "测试运行失败: SQL解码失败: ..."
+}
+```
+
+### 7.5 异步执行流程
+
+```
+POST /api/dispatch/test_run
+   │  1. run_id 幂等校验（已存在则直接返回 ok）
+   │  2. Base64 解码 sql
+   │  3. {{key}} 参数替换
+   │  4. 写入 exec_queue（status = pending）
+   │  5. 投递到内存 channel
+   ▼
+立即返回 {"code":200,"data":"ok"}
+   │
+   │  （后台 worker 消费）
+   │  6. exec_queue.status → running
+   │  7. 连接 ODS 数据源（后端固定数据源）执行 SQL
+   │  8. 回写 exec_queue.response 与 status → success / failed
+   ▼
+GET /api/dispatch/query_result?run_id=...   ← 取结果
+```
+
+`exec_queue.status` 取值：
+
+| 值 | 说明 |
+|----|------|
+| `pending` | 待执行（已入队） |
+| `loading` | 预留 |
+| `running` | 执行中 |
+| `success` | 执行成功 |
+| `failed` | 执行失败 |
+
+### 7.6 GET /api/dispatch/query_result —— 查询测试运行结果
+
+> ✅ **该路由已挂载**（`router/router.go:130`：`dispatchApi.GET("/query_result", dispatch.QueryResult)`），可正常访问。
+
+#### 7.6.1 请求参数（Query）
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| run_id | string | 是 | 提交测试运行时使用的 `run_id` |
+
+#### 7.6.2 响应参数（data 字段）
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| msg | string | 执行信息，成功为 `success`，失败为错误描述 |
+| sql | string | 实际执行的 SQL 原文（已由 Base64 解码并完成 `{{key}}` 参数替换） |
+| header | array | 结果集列名列表 |
+| body | array | 结果集数据，元素为「列名 → 值」的对象 |
+
+> 当 `exec_queue.status` 仍为 `pending` / `running`（即未结束）时，`data` 返回**空对象** `{}`，前端应据此判断「仍在执行」并轮询。
+
+#### 7.6.3 响应示例
+
+**执行完成**：
+
+```json
+{
+  "code": 200,
+  "data": {
+    "msg": "success",
+    "sql": "SELECT * FROM orders WHERE dt = '2026-09-15' LIMIT 10",
+    "header": ["id", "name", "amount"],
+    "body": [
+      { "id": 1001, "name": "张三", "amount": "99.00" }
+    ]
+  }
+}
+```
+
+**执行失败**：
+
+```json
+{
+  "code": 200,
+  "data": {
+    "msg": "Error 1146: Table 'biz.orders' doesn't exist",
+    "sql": "SELECT * FROM orders LIMIT 10",
+    "header": null,
+    "body": null
+  }
+}
+```
+
+**仍在执行中**：
+
+```json
+{
+  "code": 200,
+  "data": {}
+}
+```
+
+#### 7.6.4 失败响应
+
+```json
+{
+  "code": 500,
+  "message": "运行结果获取失败: ..."
+}
+```
+
+---
+
+## 8. 数据源接口（api/datasource/*）
+
+数据源用于为采集节点（`Collect`）提供连接信息，路由同样未挂 JWT。
+
+### 8.1 POST /api/datasource/save —— 保存数据源
+
+根据 `id` 判断新增或更新。保存时自动补充：`created_on`、`created_by=admin`。
+
+#### 8.1.1 请求参数（Body，JSON）
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| id | string | 是 | 数据源 ID（唯一），保存逻辑为按主键 upsert。同 §4.1，新增时也必须传入前端生成的 UUID |
 | code | string | 是 | 数据源编码 |
 | name | string | 是 | 数据源名称 |
 | type | string | 是 | 数据源类型，见 2.4（如 `mysql`） |
 | conn_str | string | 是 | 连接信息，JSON 字符串（结构见 7.1.2） |
 
-#### 7.1.2 conn_str 字段结构说明
+#### 8.1.2 conn_str 字段结构说明
 
 `conn_str` 是**字符串类型的 JSON**。`type = mysql` 时（`MysqlDatasourceContent`）：
 
@@ -453,7 +736,7 @@ type CollectNodeContent struct {
 | database | string | 数据库名 |
 | schema | string | Schema 名 |
 
-#### 7.1.3 请求示例
+#### 8.1.3 请求示例
 
 ```json
 {
@@ -465,7 +748,7 @@ type CollectNodeContent struct {
 }
 ```
 
-#### 7.1.4 响应示例
+#### 8.1.4 响应示例
 
 **成功**：
 
@@ -494,15 +777,15 @@ type CollectNodeContent struct {
 }
 ```
 
-### 7.2 GET /api/datasource/list —— 获取数据源列表
+### 8.2 GET /api/datasource/list —— 获取数据源列表
 
 返回全部数据源。
 
-#### 7.2.1 请求参数
+#### 8.2.1 请求参数
 
 无。
 
-#### 7.2.2 响应参数（data 字段）
+#### 8.2.2 响应参数（data 字段）
 
 `data` 为数组，元素结构如下：
 
@@ -514,7 +797,7 @@ type CollectNodeContent struct {
 | type | string | 数据源类型 |
 | conn_str | string | 连接信息（JSON 字符串） |
 
-#### 7.2.3 响应示例
+#### 8.2.3 响应示例
 
 ```json
 {
@@ -531,7 +814,7 @@ type CollectNodeContent struct {
 }
 ```
 
-#### 7.2.4 失败响应
+#### 8.2.4 失败响应
 
 ```json
 {
@@ -540,17 +823,17 @@ type CollectNodeContent struct {
 }
 ```
 
-### 7.3 GET /api/datasource/tables —— 按数据源 ID 获取表列表
+### 8.3 GET /api/datasource/tables —— 按数据源 ID 获取表列表
 
 根据数据源 ID 连接其指向的 MySQL 数据库，返回该库下所有表的表名与注释。
 
-#### 7.3.1 请求参数（Query）
+#### 8.3.1 请求参数（Query）
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | ds_id | string | 是 | 数据源 ID（唯一） |
 
-#### 7.3.2 响应参数（data 字段）
+#### 8.3.2 响应参数（data 字段）
 
 `data` 为数组，元素结构如下：
 
@@ -559,7 +842,7 @@ type CollectNodeContent struct {
 | name | string | 表名 |
 | description | string | 表注释（无注释时为空字符串） |
 
-#### 7.3.3 响应示例
+#### 8.3.3 响应示例
 
 ```json
 {
@@ -571,7 +854,7 @@ type CollectNodeContent struct {
 }
 ```
 
-#### 7.3.4 失败响应
+#### 8.3.4 失败响应
 
 ```json
 {
@@ -587,18 +870,18 @@ type CollectNodeContent struct {
 }
 ```
 
-### 7.4 GET /api/datasource/columns —— 按数据源 ID + 表名获取列列表
+### 8.4 GET /api/datasource/columns —— 按数据源 ID + 表名获取列列表
 
 根据数据源 ID 与表名，返回该表下所有列的字段名、类型、注释及主键序号。
 
-#### 7.4.1 请求参数（Query）
+#### 8.4.1 请求参数（Query）
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | ds_id | string | 是 | 数据源 ID（唯一） |
 | table | string | 是 | 表名 |
 
-#### 7.4.2 响应参数（data 字段）
+#### 8.4.2 响应参数（data 字段）
 
 `data` 为数组，元素结构如下：
 
@@ -610,7 +893,7 @@ type CollectNodeContent struct {
 | value | string | 可选，分区字段 value 值（当前固定为空） |
 | primary_key_seq | number | 主键序号，0 表示非主键，1 起为复合主键中的第几个字段 |
 
-#### 7.4.3 响应示例
+#### 8.4.3 响应示例
 
 ```json
 {
@@ -622,7 +905,7 @@ type CollectNodeContent struct {
 }
 ```
 
-#### 7.4.4 失败响应
+#### 8.4.4 失败响应
 
 ```json
 {
@@ -638,14 +921,15 @@ type CollectNodeContent struct {
 }
 ```
 
-### 7.4 GET /api/datasource/ods/tables —— 获取ods表列表
+### 8.5 GET /api/datasource/ods/tables —— 获取 ODS 表列表
 
-根据配置的ods信息返回该库下所有表的表名与注释。
+数据源 ID 由**后端固定**（常量 `OdsDatasourceId`），前端无需传入。
 
-#### 7.4.1 请求参数（Query）
+#### 8.5.1 请求参数（Query）
 
+无。
 
-#### 7.4.2 响应参数（data 字段）
+#### 8.5.2 响应参数（data 字段）
 
 `data` 为数组，元素结构如下：
 
@@ -654,7 +938,7 @@ type CollectNodeContent struct {
 | name | string | 表名 |
 | description | string | 表注释（无注释时为空字符串） |
 
-#### 7.4.3 响应示例
+#### 8.5.3 响应示例
 
 ```json
 {
@@ -666,14 +950,7 @@ type CollectNodeContent struct {
 }
 ```
 
-#### 7.4.4 失败响应
-
-```json
-{
-  "code": 400,
-  "message": "缺少数据源ID参数"
-}
-```
+#### 8.5.4 失败响应
 
 ```json
 {
@@ -682,17 +959,17 @@ type CollectNodeContent struct {
 }
 ```
 
-### 7.5 GET /api/datasource/ods/columns —— 按ods的表名获取列列表
+### 8.6 GET /api/datasource/ods/columns —— 按 ODS 表名获取列列表
 
-根据表名，返回该表下所有列的字段名、类型、注释及主键序号。
+数据源 ID 由**后端固定**（常量 `OdsDatasourceId`）。
 
-#### 7.5.1 请求参数（Query）
+#### 8.6.1 请求参数（Query）
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | table | string | 是 | 表名 |
 
-#### 7.5.2 响应参数（data 字段）
+#### 8.6.2 响应参数（data 字段）
 
 `data` 为数组，元素结构如下：
 
@@ -704,7 +981,7 @@ type CollectNodeContent struct {
 | value | string | 可选，分区字段 value 值（当前固定为空） |
 | primary_key_seq | number | 主键序号，0 表示非主键，1 起为复合主键中的第几个字段 |
 
-#### 7.5.3 响应示例
+#### 8.6.3 响应示例
 
 ```json
 {
@@ -716,7 +993,7 @@ type CollectNodeContent struct {
 }
 ```
 
-#### 7.5.4 失败响应
+#### 8.6.4 失败响应
 
 ```json
 {
@@ -733,9 +1010,9 @@ type CollectNodeContent struct {
 ```
 ---
 
-## 8. 前端联调要点
+## 9. 前端联调要点
 
-1. **鉴权**：`/api/dispatch/*` 无需 JWT，但请求需通过 CORS（已全局开启，允许 `POST/GET/OPTIONS` 等）。
+1. **鉴权**：`/api/dispatch/*` 无需 JWT，但请求需通过 CORS（已全局开启，允许 `POST/GET/OPTIONS/PUT/PATCH/DELETE`）。
 2. **字段命名**：请求与响应均使用 **snake_case**（如 `ahead_id`、`behind_id`、`created_on`）。
 3. **content 是字符串**：前端保存节点时，需将内容对象 `JSON.stringify` 后再放入 `content`；读取图数据后需 `JSON.parse` 再使用。
 4. **UPSERT 语义**：`id` 传值即更新，不传（空字符串）即新增。建议前端为每个节点/连线生成并维护稳定 ID。
@@ -743,3 +1020,35 @@ type CollectNodeContent struct {
 6. **Cron 校验**：节点 `schedule` 非法会返回 500，建议前端先做格式校验或捕获该错误并提示用户。
 7. **必填与枚举校验**：节点 `code`/`name`/`type`/`schedule`、连线 `ahead_id`/`behind_id`/`type` 为必填；`type` 取值必须在枚举内（节点 `Virtual/SQL/Collect/Sync`，连线 `Dotted/Solid`），否则接口返回 400。
 8. **数据源校验与 conn_str**：数据源 `code`/`name`/`type`/`conn_str` 为必填；`conn_str` 同样是 JSON 字符串，保存时 `JSON.stringify`、读取时 `JSON.parse`。
+9. **删除接口**：`DELETE /api/dispatch/node` 与 `DELETE /api/dispatch/line` 使用 **Query 参数** `id`（不是 Body），且为逻辑删除。删除时建议前端先做二次确认。
+10. **测试运行是异步的**：`POST /api/dispatch/test_run` 返回 `ok` 仅代表「已受理」，不代表 SQL 执行成功。`sql` 必须 Base64 编码，`params` 不可缺省（`{}` 可通过）。执行结果需通过 `GET /api/dispatch/query_result?run_id=...` 轮询获取（**该路由当前尚未挂载，见 7.6**）。
+
+---
+
+## 10. 已知缺陷（联调前必读）
+
+下表是当前代码版本的接口可用性清单，兼作本轮审计的回归记录。标 ✅ 的已修复并复核通过，
+标 ❌ 的**仍然存在，请勿按「正常路径」预期联调**。
+
+当前唯一未闭合项为 **D16**（低压场景无影响，见表格末行）。
+
+| 编号 | 状态 | 影响接口 | 现象 | 根因位置 |
+|------|------|----------|------|----------|
+| D1 | ✅ 已修复 | `POST /api/dispatch/test_run` | ~~请求必崩进程~~ | `TestRunSqlReq.RunId` 的 `binding` 已由 `run_id` 改为 `required` |
+| D2 | ✅ 已修复 | `GET /api/dispatch/query_result` | ~~恒定 404~~ | `router/router.go:130` 已注册 `dispatchApi.GET("/query_result", dispatch.QueryResult)` |
+| D3 | ✅ 已修复 | `POST /api/dispatch/test_run` 的实际执行 | ~~SQL 永不执行，结果恒为 `failed`~~ | `service/dispatchserver/dispatch.go:120` 已改为 `entity.Sql`；`node_server.go:152` 的 `SendEntity(ctx, req.RunId, template)` 传参顺序也正确。残留的响应字段回显问题另记为 D15 |
+| D4 | ✅ 已修复 | 全部依赖数据源的接口 | ~~数据源报错时进程退出~~ | 两处 `log.Fatalf` 已移除，改为直接 `return` |
+| D5 | ✅ 已修复 | 延时队列全部投递 | ~~插入 `delay_queue` 必然失败~~ | `init/dispatch.sql` 的 `delay_queue` 建表语句已补上 `topic VARCHAR(64) NOT NULL` 与 `max_retry INT NOT NULL DEFAULT 3` |
+| D6 | ✅ 已修复 | 首次初始化数据库 | ~~建表脚本执行报语法错误~~ | `init/dispatch.sql`：`exec_queue.status` 行末已补逗号；`insert into datasource ...` 语句末已补分号 |
+| D7 | ✅ 已修复 | `POST /api/dispatch/node`、`POST /api/dispatch/line` | ~~未传 `id` 时新增第二次会主键冲突~~ | `NodeSaveReq.Id` / `LineSaveReq.Id` / `DatasourceReq.Id` 均已加 `binding:"required"`；契约变为「新增也必须传前端生成的 UUID」，详见 §4.1/§5.1/§8.1 |
+| D8 | ✅ 已修复 | `POST /api/datasource/save` | ~~首次（`id` 为空）保存失败~~ | 同 D7，`DatasourceReq.Id` 已必填 |
+| D9 | ✅ 已修复 | DAG 实例化（`InstanceCreate`） | ~~写入 `node_instance` 可能失败~~ | `init/dispatch.sql` 的 `start_time`/`end_time` 已改为 `NULL DEFAULT NULL`（实例创建时尚未开始执行，本就不该是 `NOT NULL`），`models/dispatch/dispatch.go` 的 gorm tag 同步去掉 `NOT NULL` |
+| D10 | ✅ 已修复 | DAG 实例化（`InstanceCreate`） | ~~根节点在批次窗口内生成 0 个实例，进而 panic~~ | `utils/cron_parse.go` 的取值循环直接用 `start` 起步，而 cron 的 `Next` 返回**严格大于**入参的时间点，导致落在窗口左端点上的触发（如 `0 0 * * *`）被整条吞掉；已改为起步前回退 1 秒 |
+| D11 | ✅ 已修复 | 下游实例触发 | ~~延时值算错，下游被立即执行~~ | `Second()` 是分钟内的秒序号，`v.Second() - time.Now().Second()` 得不到时间差；已统一改为 `time.Until(executeTime)` |
+| D12 | ✅ 已修复 | 下游实例触发 | ~~对 nil `producer` 调用 `Publish`~~ | `controller/dispatch_controller.go:43` 已改为 `NewNodeRuntime(iStore, producer, consumer)`，`node_runtime.go:91` 的调用点不再为空 |
+| D13 | ✅ 已修复 | 下游实例触发 | ~~处理器内 panic 会终止**整个进程**~~ | `internal/store/delayqueue/consumer.go` 新增 `callHandler`，用 `defer recover()` 把 panic 收敛为单次调用的 error，`processOne` 改走它。panic 现在只会让当前这条消息按失败重试，不再打挂进程 |
+| D14 | ✅ 已修复 | 下游实例触发 | ~~启动瞬间的待处理消息被误判 `failed`；并有数据竞争~~ | `controller/dispatch_controller.go` 已把 `StartWorkers(ctx, 4)` 挪到 `Dispatch(...)`（内部 `Register`）**之后**；`handlers` 加 `sync.RWMutex`，`Register` 走 `Lock`、读取走新增的 `lookupHandler`（`RLock`）。竞争可由 `go test -race ./internal/store/delayqueue/` 复核 |
+| D15 | ✅ 已修复 | `GET /api/dispatch/query_result` | ~~`sql` 字段回显的是 `run_id`~~ | `service/dispatchserver/dispatch.go` 已改为 `resp.Sql = entity.Sql` |
+| D16 | ❌ | `POST /api/dispatch/test_run`（低压场景无影响） | 重启后未完成的测试运行**永久卡在 `pending`**；提交量突增时请求可能阻塞 | ① `dispatch.go:27` 的 `init()` 只有 `// todo 读取数据库中的未结束的exec_queue中的数据写入到channel`，尚未实现——进程重启后内存 channel 里未消费的任务全部丢失，对应 `exec_queue` 行的 `status` 永远是 `pending`，前端会一直轮询到空对象 `{}`。② `SendEntity` 的 `select` 带 `default` 分支，`ctx.Done()` 实际只在 ctx 已取消时有约 50% 概率被选中，真正执行的是 `default` 里的**阻塞**发送 `ch <- ...`；channel 容量 100，一旦并发提交超过 100 且消费端跟不上，HTTP 请求会在 handler 内阻塞等待 |
+
+固定的枚举值、字段长度限制请以本文档第 2 节与各接口章节为准。

@@ -1,7 +1,9 @@
 package request
 
 type NodeSaveReq struct {
-	Id       string `json:"id"`
+	// Id 为必填：保存逻辑是「按主键 upsert」，Id 为空时会以空字符串作为主键 INSERT，
+	// 第二次提交即主键冲突。新增时请由前端生成 UUID。
+	Id       string `json:"id" binding:"required"`
 	Code     string `json:"code" binding:"required"`
 	Name     string `json:"name" binding:"required"`
 	Content  string `json:"content"`
@@ -10,14 +12,16 @@ type NodeSaveReq struct {
 }
 
 type LineSaveReq struct {
-	Id       string `json:"id"`
+	// 同 NodeSaveReq.Id：必填，新增时由前端生成 UUID。
+	Id       string `json:"id" binding:"required"`
 	AheadId  string `json:"ahead_id" binding:"required"`
 	BehindId string `json:"behind_id" binding:"required"`
 	Type     string `json:"type" binding:"required,oneof=Dotted Solid"`
 }
 
 type DatasourceReq struct {
-	Id      string `json:"id"`
+	// 同 NodeSaveReq.Id：必填，新增时由前端生成 UUID。
+	Id      string `json:"id" binding:"required"`
 	Code    string `json:"code" binding:"required"`
 	Name    string `json:"name" binding:"required"`
 	Type    string `json:"type" binding:"required"`
@@ -28,7 +32,7 @@ type DatasourceReq struct {
 
 // TestRunSqlReq 测试运行请求体
 type TestRunSqlReq struct {
-	RunId  string                 `json:"run_id" binding:"run_id"`
+	RunId  string                 `json:"run_id" binding:"required"`
 	Sql    string                 `json:"sql" binding:"required"`
 	Params map[string]interface{} `json:"params" binding:"required"`
 	Type   string                 `json:"type"`
