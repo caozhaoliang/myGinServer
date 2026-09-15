@@ -9,6 +9,9 @@ type NodeSaveReq struct {
 	Content  string `json:"content"`
 	Type     string `json:"type" binding:"required,oneof=Virtual SQL Collect Sync"`
 	Schedule string `json:"schedule" binding:"required"`
+	// X/Y 为节点在画布上的坐标（可选）：新增节点时由前端传入，旧数据或缺省时为 null，前端退回网格布局
+	X *float64 `json:"x"`
+	Y *float64 `json:"y"`
 }
 
 type LineSaveReq struct {

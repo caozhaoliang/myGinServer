@@ -43,6 +43,8 @@ func (n *NodeServer) SaveNode(ctx context.Context, req *request.NodeSaveReq) err
 		Name:      req.Name,
 		Content:   sql.NullString{String: req.Content, Valid: true},
 		Schedule:  req.Schedule,
+		PosX:      req.X,
+		PosY:      req.Y,
 		Type:      mdispatch.NodeType(req.Type),
 		Status:    mdispatch.NormalStatus,
 		Deleted:   0,
@@ -105,6 +107,8 @@ func (n *NodeServer) Graph(ctx context.Context) (response.Graph, error) {
 			Content:  node.Content.String,
 			Type:     string(node.Type),
 			Schedule: node.Schedule,
+			X:        node.PosX,
+			Y:        node.PosY,
 		})
 	}
 	for _, line := range lists {

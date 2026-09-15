@@ -6,6 +6,8 @@ CREATE TABLE `nodes` (
         `name` VARCHAR(128) NOT NULL DEFAULT '' COMMENT '节点名称',
         `content` MEDIUMTEXT COMMENT '节点内容',
         `schedule` VARCHAR(64) NOT NULL DEFAULT '' COMMENT 'Cron表达式（调度时间）',
+        `pos_x` DOUBLE NULL DEFAULT NULL COMMENT '节点横坐标（画布位置）',
+        `pos_y` DOUBLE NULL DEFAULT NULL COMMENT '节点纵坐标（画布位置）',
         `type` VARCHAR(32) NOT NULL DEFAULT '' COMMENT '节点类型：Virtual/SQL/Collect/Sync',
         `status` VARCHAR(32) NOT NULL DEFAULT '' COMMENT '节点状态：Normal/DryRun/StopRun',
         `deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '逻辑删除标识：0-未删除，1-已删除',
