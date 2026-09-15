@@ -33,17 +33,28 @@ type TestRunEntity struct {
 	RunId string
 }
 
+// SendEntity 把一次测试运行投递到内存队列。
+// 队列满时立即返回错误，而不是把调用方挂住：ch 容量为 100，且消费端
+// （Dispatch 内的单 goroutine）是串行执行 SQL 的，一旦积压，阻塞在这里的
+// HTTP 请求既等不到槽位释放，也无法随客户端断开而取消。
 func (n *NodeServer) SendEntity(ctx context.Context, runId, sql string) error {
+	// 先剔除已取消的请求：否则当 ctx 已取消而 channel 恰有空位时，
+	// select 会在「发送」与「ctx.Done()」之间随机选一个，导致已取消的请求仍被投递。
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	select {
+	case ch <- TestRunEntity{
+		Sql:   sql,
+		RunId: runId,
+	}:
+		return nil
 	case <-ctx.Done():
 		return ctx.Err()
 	default:
-		ch <- TestRunEntity{
-			Sql:   sql,
-			RunId: runId,
-		}
+		// 注意：此处的 default 是「立即返回错误」，不是阻塞发送，不会挂住调用方。
+		return fmt.Errorf("测试运行队列已满（容量 %d），请稍后重试", cap(ch))
 	}
-	return nil
 }
 
 func (n *NodeServer) Dispatch(ctx context.Context) {

@@ -150,7 +150,24 @@ func (n *NodeServer) TestRun(ctx context.Context, req request.TestRunSqlReq) err
 		return err
 	}
 	err = n.SendEntity(ctx, req.RunId, template)
-	return err
+	if err != nil {
+		// 补偿：上面已向 exec_queue 落了一条 pending 记录，但消息没能进入内存队列，
+		// 它永远不会被执行，前端轮询 QueryResult 会一直拿到空对象、无法终止。
+		// 这里把它置为 failed 并写入失败原因，让轮询能正常结束。
+		//
+		// 必须用「脱离取消」的 context：投递失败的常见原因正是 ctx 被取消或超时，
+		// 若沿用原 ctx，这条补偿写入自身也会被一并取消掉。
+		markCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 3*time.Second)
+		defer cancel()
+		// Response 必须是合法 JSON：QueryTestResult 对 finished 状态会直接 json.Unmarshal。
+		payload, _ := json.Marshal(response.TestRunResp{Msg: "投递执行队列失败: " + err.Error(), Sql: template})
+		if markErr := n.store.UpdateExecQueueResp(markCtx, "", req.RunId, string(payload), string(mdispatch.Failed)); markErr != nil {
+			// 补偿也失败，两个错误一并抛出，避免其中之一被静默吞掉
+			return fmt.Errorf("投递执行队列失败: %v；标记 exec_queue 为 failed 亦失败: %v", err, markErr)
+		}
+		return err
+	}
+	return nil
 }
 
 func (n *NodeServer) QueryTestResult(ctx context.Context, runId string) (response.TestRunResp, error) {

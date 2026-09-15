@@ -591,6 +591,19 @@ SELECT * FROM orders WHERE dt = '{{dt}}' AND id = {{id}} LIMIT 10
 }
 ```
 
+**失败（执行队列已满，容量 100）**：
+
+```json
+{
+  "code": 500,
+  "message": "测试运行失败: 测试运行队列已满（容量 100），请稍后重试"
+}
+```
+
+> 队列满时**立即返回该错误**，不会阻塞等待槽位释放。此时第 4 步已写入的那条
+> `exec_queue` 记录会被就地置为 `failed` 并写明原因，前端轮询 `query_result`
+> 能正常拿到终止状态，不会一直空转（见 §7.5）。
+
 ### 7.5 异步执行流程
 
 ```
@@ -600,6 +613,8 @@ POST /api/dispatch/test_run
    │  3. {{key}} 参数替换
    │  4. 写入 exec_queue（status = pending）
    │  5. 投递到内存 channel
+   │     └─ 投递失败（队列已满 / ctx 已取消）时：把第 4 步那条记录直接置为 failed
+   │        并写入失败原因，接口返回 500；该记录不会停留在 pending
    ▼
 立即返回 {"code":200,"data":"ok"}
    │
@@ -1030,7 +1045,8 @@ GET /api/dispatch/query_result?run_id=...   ← 取结果
 下表是当前代码版本的接口可用性清单，兼作本轮审计的回归记录。标 ✅ 的已修复并复核通过，
 标 ❌ 的**仍然存在，请勿按「正常路径」预期联调**。
 
-当前唯一未闭合项为 **D16**（低压场景无影响，见表格末行）。
+当前唯一未闭合项为 **D16**：`SendEntity` 的阻塞投递子项已作为 **D17** 修复，
+剩下的只有「进程重启后未完成的任务无法恢复」，仅影响重启后的历史任务。
 
 | 编号 | 状态 | 影响接口 | 现象 | 根因位置 |
 |------|------|----------|------|----------|
@@ -1049,6 +1065,7 @@ GET /api/dispatch/query_result?run_id=...   ← 取结果
 | D13 | ✅ 已修复 | 下游实例触发 | ~~处理器内 panic 会终止**整个进程**~~ | `internal/store/delayqueue/consumer.go` 新增 `callHandler`，用 `defer recover()` 把 panic 收敛为单次调用的 error，`processOne` 改走它。panic 现在只会让当前这条消息按失败重试，不再打挂进程 |
 | D14 | ✅ 已修复 | 下游实例触发 | ~~启动瞬间的待处理消息被误判 `failed`；并有数据竞争~~ | `controller/dispatch_controller.go` 已把 `StartWorkers(ctx, 4)` 挪到 `Dispatch(...)`（内部 `Register`）**之后**；`handlers` 加 `sync.RWMutex`，`Register` 走 `Lock`、读取走新增的 `lookupHandler`（`RLock`）。竞争可由 `go test -race ./internal/store/delayqueue/` 复核 |
 | D15 | ✅ 已修复 | `GET /api/dispatch/query_result` | ~~`sql` 字段回显的是 `run_id`~~ | `service/dispatchserver/dispatch.go` 已改为 `resp.Sql = entity.Sql` |
-| D16 | ❌ | `POST /api/dispatch/test_run`（低压场景无影响） | 重启后未完成的测试运行**永久卡在 `pending`**；提交量突增时请求可能阻塞 | ① `dispatch.go:27` 的 `init()` 只有 `// todo 读取数据库中的未结束的exec_queue中的数据写入到channel`，尚未实现——进程重启后内存 channel 里未消费的任务全部丢失，对应 `exec_queue` 行的 `status` 永远是 `pending`，前端会一直轮询到空对象 `{}`。② `SendEntity` 的 `select` 带 `default` 分支，`ctx.Done()` 实际只在 ctx 已取消时有约 50% 概率被选中，真正执行的是 `default` 里的**阻塞**发送 `ch <- ...`；channel 容量 100，一旦并发提交超过 100 且消费端跟不上，HTTP 请求会在 handler 内阻塞等待 |
+| D16 | ❌ | `POST /api/dispatch/test_run`（仅影响进程重启后的历史任务） | 重启后未完成的测试运行**永久卡在 `pending`** | `service/dispatchserver/dispatch.go` 的 `init()` 只有一句 `// todo 读取数据库中的未结束的exec_queue中的数据写入到channel`，尚未实现——进程重启后内存 channel 里未消费的任务全部丢失，对应 `exec_queue` 行的 `status` 永远是 `pending`，前端会一直轮询到空对象 `{}`。原先并列的「提交量突增时请求阻塞」子项已拆出并作为 D17 修复 |
+| D17 | ✅ 已修复 | `POST /api/dispatch/test_run` | ~~并发超 100 时请求阻塞在 handler 内且无法随客户端断开解除；投递失败的记录永远 `pending`~~ | ① `SendEntity` 原 `select` 的 `default` 分支里是**阻塞**发送 `ch <- ...`，且完全没监听 `ctx`，队列满即挂死；已改为「发送 / `ctx.Done()` 竞争，`default` 立即返回『队列已满』错误」，并在入口补一次 `ctx.Err()` 前置检查——否则 ctx 已取消而 channel 恰有空位时，`select` 会在两个就绪分支间随机选择，约 50% 概率仍投递已取消的请求。② `node_server.go` 的 `TestRun` 在 `SendEntity` 失败时新增补偿写入，把该 `exec_queue` 行置为 `failed` 并写明原因，让前端轮询能终止；补偿写入必须用 `context.WithoutCancel(ctx)` 派生，因为投递失败的原因常常正是 ctx 被取消。回归测试见 `service/dispatchserver/dispatch_test.go` |
 
 固定的枚举值、字段长度限制请以本文档第 2 节与各接口章节为准。
