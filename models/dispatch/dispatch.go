@@ -4,6 +4,10 @@ import (
 	"database/sql"
 )
 
+const (
+	NodeInstanceTopic = "instance_execute"
+)
+
 type NodeType string
 type NodeStatus string
 type LineType string
@@ -133,7 +137,7 @@ func (m *NodeInstance) TableName() string {
 	return "node_instance"
 }
 
-// 实例连线表
+// InstanceLine 实例连线表
 type InstanceLine struct {
 	Id        string         `gorm:"column:id;type:varchar(64);primary_key;comment:ID" json:"id"`
 	Ahead     string         `gorm:"column:ahead;type:varchar(32);comment:ahead;NOT NULL" json:"ahead"`
@@ -145,4 +149,28 @@ type InstanceLine struct {
 
 func (m *InstanceLine) TableName() string {
 	return "instance_line"
+}
+
+// --- 延迟队列 ---
+
+type DelayQueue struct {
+	Id          uint64         `gorm:"column:id;type:bigint(20) unsigned;primary_key;AUTO_INCREMENT" json:"id"`
+	BizId       string         `gorm:"column:biz_id;type:varchar(64);comment:业务关联ID;NOT NULL" json:"biz_id"`
+	ExecuteTime sql.NullTime   `gorm:"column:execute_time;type:datetime(3);comment:期望执行时间;NOT NULL" json:"execute_time"`
+	Status      int            `gorm:"column:status;type:tinyint(4);default:0;comment:0待处理,1处理中,2成功,3失败;NOT NULL" json:"status"`
+	Payload     sql.NullString `gorm:"column:payload;type:json;comment:消息体" json:"payload"`
+	RetryCount  int            `gorm:"column:retry_count;type:int(11);default:0;NOT NULL" json:"retry_count"`
+	CreatedAt   sql.NullTime   `gorm:"column:created_at;type:datetime(3);default:CURRENT_TIMESTAMP;NOT NULL" json:"created_at"`
+	UpdatedAt   sql.NullTime   `gorm:"column:updated_at;type:datetime(3);default:CURRENT_TIMESTAMP;NOT NULL" json:"updated_at"`
+}
+
+func (m *DelayQueue) TableName() string {
+	return "delay_queue"
+}
+
+type TryNextRow struct {
+	DownstreamID string       `gorm:"column:downstream_id"`
+	UpstreamID   string       `gorm:"column:upstream_id"`
+	UpstreamStat string       `gorm:"column:upstream_status"`
+	ExecuteTime  sql.NullTime `gorm:"column:execute_time"`
 }

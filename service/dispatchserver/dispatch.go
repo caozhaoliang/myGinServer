@@ -9,8 +9,10 @@ import (
 	"myGinServer/api/response"
 	"myGinServer/models/dispatch"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
+	"github.com/robfig/cron/v3"
 )
 
 var (
@@ -19,6 +21,7 @@ var (
 )
 
 const (
+	RootNodeId      = "615966d0-af61-11f1-8f44-866b84541a87"
 	OdsDatasourceId = "615966d0-af61-11f1-8f44-866b84548888"
 )
 
@@ -31,25 +34,50 @@ type TestRunEntity struct {
 	RunId string
 }
 
-func (n *NodeServer) SendEntity(runId, sql string) {
-	ch <- TestRunEntity{
-		Sql:   sql,
-		RunId: runId,
+func (n *NodeServer) SendEntity(ctx context.Context, runId, sql string) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+		ch <- TestRunEntity{
+			Sql:   sql,
+			RunId: runId,
+		}
 	}
+	return nil
 }
 
 func (n *NodeServer) Dispatch(ctx context.Context) {
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case entity, ok := <-ch:
-			if !ok {
-				return
-			}
-			n.runSQL(ctx, entity)
-		}
+	c := cron.New()
+	// 先启动调度器
+	c.Start()
+	// 运行时动态添加任务（调度器已在运行，依然生效）
+	id, err := c.AddFunc("30 23 *  *  *", func() {
+		now := time.Now()
+		date := now.Format("2006-01-02")
+		_ = n.InstanceCreate(ctx, request.InstanceCreateReq{
+			Id:      RootNodeId,
+			Project: "",
+			BizDate: date,
+		})
+	})
+	if err != nil {
+		panic(err)
 	}
+	go func() {
+		defer c.Remove(id)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case entity, ok := <-ch:
+				if !ok {
+					return
+				}
+				n.runSQL(ctx, entity)
+			}
+		}
+	}()
 }
 
 func normalizeValue(v interface{}) interface{} {
@@ -159,7 +187,7 @@ func (n *NodeServer) InstanceCreate(ctx context.Context, event request.InstanceC
 		return err
 	}
 	builder := NewInstanceDAGBuilder(event.Id, event.BatchId(), n.store)
-	dag, _, err := builder.Build(lines)
+	dag, root, err := builder.Build(lines)
 	if err != nil {
 		return err
 	}
@@ -167,11 +195,11 @@ func (n *NodeServer) InstanceCreate(ctx context.Context, event request.InstanceC
 	if err != nil {
 		return err
 	}
-	err = n.batchCreateInstance(ctx, dag)
+	err = n.batchCreateInstance(ctx, root.Id, dag)
 	return err
 }
 
-func (n *NodeServer) batchCreateInstance(ctx context.Context, dag NodeDAG) error {
+func (n *NodeServer) batchCreateInstance(ctx context.Context, rootId string, dag NodeDAG) error {
 	// 写入数据库
 	depends := dag.BuildInstanceDepend()
 	var depend []dispatch.InstanceLine
@@ -193,6 +221,9 @@ func (n *NodeServer) batchCreateInstance(ctx context.Context, dag NodeDAG) error
 	if err != nil {
 		return err
 	}
-	// todo 写入根实例ID到延时队列。
-	return nil
+	instance := dag.GetInstanceById(rootId)
+	delaySec := instance.ExecuteTime.Time.Second() - time.Now().Second()
+	// 写入根实例ID到延时队列。
+	err = n.producer.Publish(ctx, dispatch.NodeInstanceTopic, rootId, instance.Id, time.Second*time.Duration(delaySec))
+	return err
 }

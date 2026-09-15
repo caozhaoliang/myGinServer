@@ -123,6 +123,8 @@ func NewRouter(controller *controller.UserController,
 	{
 		dispatchApi.POST("/node", dispatch.SaveNode)
 		dispatchApi.POST("/line", dispatch.SavaLine)
+		dispatchApi.DELETE("/line", dispatch.DeleteLine)
+		dispatchApi.DELETE("/node", dispatch.DeleteNode)
 		dispatchApi.GET("/graph", dispatch.Graph)
 		dispatchApi.POST("/test_run", dispatch.TestRun)
 	}

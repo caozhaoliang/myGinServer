@@ -4,7 +4,10 @@ import (
 	"context"
 	"myGinServer/api/request"
 	"myGinServer/config"
+	"myGinServer/internal/store/delayqueue"
 	"myGinServer/internal/store/dispatch"
+	"myGinServer/internal/workflow"
+	mdispatch "myGinServer/models/dispatch"
 	"myGinServer/pkg/saas_db"
 	"myGinServer/service/dispatchserver"
 	"net/http"
@@ -18,9 +21,9 @@ type DispatchController struct {
 	nodeServer *dispatchserver.NodeServer
 }
 
-func NewDispatchController(config *config.Config) *DispatchController {
+func NewDispatchController(ctx context.Context, config *config.Config) *DispatchController {
 	// saaS := saas_db.NewSaaS()
-	iStore := dispatch.NewDispatchStore(&saas_db.DBConfig{
+	conf := &saas_db.DBConfig{
 		Database:     config.DBConfig.DbName,
 		Host:         config.DBConfig.DbHost,
 		Password:     config.DBConfig.DbPassword,
@@ -28,10 +31,22 @@ func NewDispatchController(config *config.Config) *DispatchController {
 		User:         config.DBConfig.DbUser,
 		MaxIdleConns: 2,
 		MaxOpenConns: 2,
-	})
-
-	nodeServer := dispatchserver.NewNodeServer(iStore)
-	nodeServer.Dispatch(context.TODO())
+	}
+	iStore := dispatch.NewDispatchStore(conf)
+	db, err := saas_db.CreateEngine(conf.Database, conf)
+	if err != nil {
+		panic(err)
+	}
+	producer := delayqueue.NewProducer(db)
+	consumer := delayqueue.NewConsumer(db)
+	consumer.StartWorkers(ctx, 4)
+	runtime := workflow.NewNodeRuntime(iStore, consumer)
+	err = runtime.Dispatch(mdispatch.NodeInstanceTopic)
+	if err != nil {
+		panic(err)
+	}
+	nodeServer := dispatchserver.NewNodeServer(iStore, producer)
+	nodeServer.Dispatch(ctx)
 	return &DispatchController{nodeServer: nodeServer}
 }
 
@@ -65,6 +80,39 @@ func (s *DispatchController) SavaLine(c *gin.Context) {
 		SendSuccess(c, "ok")
 	}
 	return
+}
+func (s *DispatchController) DeleteLine(c *gin.Context) {
+	type DeleteLineReq struct {
+		Id string `json:"id" form:"id"`
+	}
+	var req DeleteLineReq
+	if err := c.ShouldBindQuery(&req); err != nil {
+		SendError(c, http.StatusBadRequest, err)
+		return
+	}
+	err := s.nodeServer.DeleteLine(c, req.Id)
+	if err != nil {
+		SendError(c, http.StatusInternalServerError, err)
+		return
+	}
+	SendSuccess(c, "ok")
+}
+
+func (s *DispatchController) DeleteNode(c *gin.Context) {
+	type DeleteLineReq struct {
+		Id string `json:"id" form:"id"`
+	}
+	var req DeleteLineReq
+	if err := c.ShouldBindQuery(&req); err != nil {
+		SendError(c, http.StatusBadRequest, err)
+		return
+	}
+	err := s.nodeServer.DeleteNode(c, req.Id)
+	if err != nil {
+		SendError(c, http.StatusInternalServerError, err)
+		return
+	}
+	SendSuccess(c, "ok")
 }
 
 func (s *DispatchController) Graph(c *gin.Context) {

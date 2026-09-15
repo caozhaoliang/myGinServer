@@ -233,3 +233,11 @@ func (n *NodeDAG) GetInstanceList() []dispatch.NodeInstance {
 	}
 	return nodeInstances
 }
+
+func (n *NodeDAG) GetInstanceById(id string) dispatch.NodeInstance {
+	node, ok := n.Nodes[id]
+	if !ok {
+		return dispatch.NodeInstance{}
+	}
+	return node.Data.instances[0]
+}

@@ -24,12 +24,40 @@ func (s *Store) SaveNode(ctx context.Context, project string, node dispatch.Node
 	return err
 }
 
+func (s *Store) GetNode(ctx context.Context, project, id string) (*dispatch.Nodes, error) {
+	db, err := s.saas.GetDB(ctx, project)
+	if err != nil {
+		return nil, err
+	}
+	var node dispatch.Nodes
+	err = db.Model(&dispatch.Nodes{}).Where("id=?", id).First(&node).Error
+	return &node, err
+}
+
+func (s *Store) DeleteNode(ctx context.Context, project, id string) error {
+	db, err := s.saas.GetDB(ctx, project)
+	if err != nil {
+		return err
+	}
+	err = db.Model(&dispatch.Nodes{}).Where("id=?", id).Update("deleted", 1).Error
+	return err
+}
+
 func (s *Store) SaveLine(ctx context.Context, project string, line dispatch.Line) error {
 	db, err := s.saas.GetDB(ctx, project)
 	if err != nil {
 		return err
 	}
 	return db.Save(&line).Error
+}
+
+func (s *Store) DeleteLine(ctx context.Context, project, id string) error {
+	db, err := s.saas.GetDB(ctx, project)
+	if err != nil {
+		return err
+	}
+	err = db.Model(&dispatch.Line{}).Where("id=?", id).Update("deleted", 1).Error
+	return err
 }
 
 func (s *Store) NodeList(ctx context.Context, project string) ([]dispatch.Nodes, error) {
@@ -143,6 +171,41 @@ func (s *Store) UpdateExecQueueResp(ctx context.Context, project, runId, resp, s
 	return nil
 }
 
+func (s *Store) GetInstance(ctx context.Context, project, id string) (*dispatch.NodeInstance, error) {
+	db, err := s.saas.GetDB(ctx, project)
+	if err != nil {
+		return nil, err
+	}
+	var instance dispatch.NodeInstance
+	err = db.Model(&dispatch.NodeInstance{}).Where("id=?", id).First(&instance).Error
+	return &instance, err
+}
+
+func (s *Store) InstanceRunningCount(ctx context.Context, project, id string) (int64, error) {
+	db, err := s.saas.GetDB(ctx, project)
+	if err != nil {
+		return 0, err
+	}
+	sqlQuery := `SELECT COUNT(*) AS running_count
+FROM node_instance t
+JOIN node_instance cur ON cur.id = ?
+WHERE t.node_id = cur.node_id
+  AND t.id <> cur.id
+  AND t.status IN ('Waiting', 'Running');`
+	var result int64
+	err = db.Raw(sqlQuery, id).Scan(&result).Error
+	return result, err
+}
+
+func (s *Store) UpdateInstance(ctx context.Context, project string, id, status string) error {
+	db, err := s.saas.GetDB(ctx, project)
+	if err != nil {
+		return err
+	}
+	err = db.Model(&dispatch.NodeInstance{}).Where("id=?", id).Update("status", status).Error
+	return err
+}
+
 func (s *Store) InstanceExists(ctx context.Context, project, batchId string) (bool, error) {
 	db, err := s.saas.GetDB(ctx, project)
 	if err != nil {
@@ -183,4 +246,29 @@ func (s *Store) BatchCreateInstance(ctx context.Context, project string,
 		err = tx.Model(&dispatch.NodeInstance{}).CreateInBatches(instance, 1000).Error
 	}
 	return err
+}
+
+func (s *Store) QueryNextInstanceLine(ctx context.Context, project string, id string) ([]dispatch.InstanceLine, error) {
+	db, err := s.saas.GetDB(ctx, project)
+	if err != nil {
+		return nil, err
+	}
+	lines := make([]dispatch.InstanceLine, 0)
+	err = db.Model(&dispatch.InstanceLine{}).Where("ahead_id=?", id).Find(&lines).Error
+	return lines, err
+}
+
+func (s *Store) TryNextRows(ctx context.Context, project, instanceId string) ([]dispatch.TryNextRow, error) {
+	db, err := s.saas.GetDB(ctx, project)
+	if err != nil {
+		return nil, err
+	}
+	var rows []dispatch.TryNextRow
+	err = db.Table("instance_line AS e1").
+		Select("e1.behind AS downstream_id, e2.ahead AS upstream_id, n.status AS upstream_status, n.execute_time").
+		Joins("JOIN instance_line AS e2 ON e2.behind = e1.behind").
+		Joins("JOIN node_instance AS n ON n.node_id = e2.ahead").
+		Where("AND e1.ahead = ?", instanceId).
+		Scan(&rows).Error
+	return rows, err
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"myGinServer/config"
 	"myGinServer/controller"
 	"myGinServer/internal/store"
@@ -21,9 +22,10 @@ func main() {
 	}
 
 	userController := controller.NewUserController(db, configYaml)
-
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	// chatController := controller.NewChatController(configYaml)
-	dispatch := controller.NewDispatchController(configYaml)
+	dispatch := controller.NewDispatchController(ctx, configYaml)
 	metricsCollector := metrics.NewMetrics()
 
 	r := router.NewRouter(userController,

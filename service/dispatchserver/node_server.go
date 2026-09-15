@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"myGinServer/api/request"
 	"myGinServer/api/response"
+	"myGinServer/internal/store/delayqueue"
 	"myGinServer/internal/store/dispatch"
 	mdispatch "myGinServer/models/dispatch"
 	"myGinServer/utils"
@@ -22,11 +23,13 @@ var (
 )
 
 type NodeServer struct {
-	store dispatch.StoreIface
+	store    dispatch.StoreIface
+	producer *delayqueue.Producer
 }
 
-func NewNodeServer(store dispatch.StoreIface) *NodeServer {
-	return &NodeServer{store: store}
+func NewNodeServer(store dispatch.StoreIface, producer *delayqueue.Producer) *NodeServer {
+
+	return &NodeServer{store: store, producer: producer}
 }
 
 func (n *NodeServer) SaveNode(ctx context.Context, req *request.NodeSaveReq) error {
@@ -50,6 +53,14 @@ func (n *NodeServer) SaveNode(ctx context.Context, req *request.NodeSaveReq) err
 		return err
 	}
 	return nil
+}
+
+func (n *NodeServer) DeleteNode(ctx context.Context, nodeId string) error {
+	return n.store.DeleteNode(ctx, "", nodeId)
+}
+
+func (n *NodeServer) DeleteLine(ctx context.Context, lineId string) error {
+	return n.store.DeleteLine(ctx, "", lineId)
 }
 
 func (n *NodeServer) SaveLine(ctx context.Context, req *request.LineSaveReq) error {
@@ -135,9 +146,10 @@ func (n *NodeServer) TestRun(ctx context.Context, req request.TestRunSqlReq) err
 		CreatedOn: sql.NullTime{time.Now(), true},
 		CreatedBy: sql.NullString{"admin", true},
 	})
-	if err == nil {
-		n.SendEntity(req.RunId, template)
+	if err != nil {
+		return err
 	}
+	err = n.SendEntity(ctx, req.RunId, template)
 	return err
 }
 

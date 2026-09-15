@@ -24,6 +24,16 @@ func NewSaasDb(conf *DBConfig) *SaasDb {
 		conf:    conf,
 	}
 }
+
+func (d *SaasDb) Close(ctx context.Context) {
+	for _, conn := range d.connMap {
+		db, err := conn.DB()
+		if err == nil {
+			_ = db.Close()
+		}
+	}
+}
+
 func (d *SaasDb) GetDB(ctx context.Context, dbName string) (db *gorm.DB, err error) {
 	d.dbMutex.Lock()
 	defer d.dbMutex.Unlock()
@@ -42,7 +52,7 @@ func (d *SaasDb) GetDB(ctx context.Context, dbName string) (db *gorm.DB, err err
 		dbCfg.MaxIdleConns = 20
 	}
 
-	db, err = createEngine(dbName, dbCfg)
+	db, err = CreateEngine(dbName, dbCfg)
 	if err != nil {
 		return
 	}
@@ -50,7 +60,8 @@ func (d *SaasDb) GetDB(ctx context.Context, dbName string) (db *gorm.DB, err err
 	db = db.WithContext(ctx)
 	return
 }
-func createEngine(project string, d *DBConfig) (*gorm.DB, error) {
+
+func CreateEngine(project string, d *DBConfig) (*gorm.DB, error) {
 
 	var buf bytes.Buffer
 	buf.WriteString(d.User)

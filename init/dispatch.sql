@@ -85,3 +85,17 @@ CREATE TABLE IF NOT EXISTS `instance_line` (
     PRIMARY KEY (`id`),
     KEY `idx_batch_id`(`batch_id`)
 )ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='实例连线表';
+
+
+CREATE TABLE delay_queue (
+                             id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                             biz_id       VARCHAR(64)     NOT NULL COMMENT '业务关联ID',
+                             execute_time DATETIME(3)     NOT NULL COMMENT '期望执行时间',
+                             status       TINYINT         NOT NULL DEFAULT 0 COMMENT '0待处理,1处理中,2成功,3失败',
+                             payload      JSON            NULL COMMENT '消息体',
+                             retry_count  INT             NOT NULL DEFAULT 0,
+                             created_at   DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+                             updated_at   DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+                             PRIMARY KEY (id),
+                             KEY idx_status_execute (status, execute_time)  -- 关键索引
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
