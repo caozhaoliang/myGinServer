@@ -96,12 +96,31 @@ func (n *DAGNode) BuildInstanceDepend() InstanceDependEntity {
 }
 
 func (n *DAGNode) CreateInstance(lstExecutionTime []time.Time, batchId string) {
+	if len(lstExecutionTime) == 0 {
+		nodeInstanceID := uuid.New().String()
+		node := dispatch.NodeInstance{
+			Id:          nodeInstanceID,
+			NodeId:      n.Data.Id,
+			Name:        n.Data.Name,
+			RunStyle:    string(dispatch.DryRun),
+			Status:      string(dispatch.InstanceStatusNotReady),
+			ExecuteTime: sql.NullTime{Time: time.Now(), Valid: true},
+			StartTime:   sql.NullTime{}, // 写库的时候这个字段是NOT NULL
+			EndTime:     sql.NullTime{},
+			BatchId:     batchId,
+			Index:       1,
+		}
+
+		n.Data.instances = append(n.Data.instances, node)
+		return
+	}
 	for i, executionTime := range lstExecutionTime {
 		nodeInstanceID := uuid.New().String()
 		node := dispatch.NodeInstance{
 			Id:          nodeInstanceID,
 			NodeId:      n.Data.Id,
 			Name:        n.Data.Name,
+			RunStyle:    string(n.Data.Status),
 			Status:      string(dispatch.InstanceStatusNotReady),
 			ExecuteTime: sql.NullTime{Time: executionTime, Valid: true},
 			StartTime:   sql.NullTime{}, // 写库的时候这个字段是NOT NULL

@@ -44,8 +44,8 @@ type Nodes struct {
 	Name      string         `json:"name" gorm:"column:name;type:VARCHAR(128);not null;default:;comment:节点名称"`                          // 节点名称
 	Content   sql.NullString `json:"content" gorm:"column:content;type:MEDIUMTEXT;comment:节点内容"`                                        // 节点内容
 	Schedule  string         `json:"schedule" gorm:"column:schedule;type:VARCHAR(64);not null;default:;comment:Cron表达式（调度时间）"`          // Cron表达式（调度时间）
-	PosX      *float64       `json:"x" gorm:"column:pos_x;type:DOUBLE;default:NULL;comment:节点横坐标（画布位置）"`                             // 节点横坐标（画布位置）
-	PosY      *float64       `json:"y" gorm:"column:pos_y;type:DOUBLE;default:NULL;comment:节点纵坐标（画布位置）"`                             // 节点纵坐标（画布位置）
+	PosX      *float64       `json:"x" gorm:"column:pos_x;type:DOUBLE;default:NULL;comment:节点横坐标（画布位置）"`                                // 节点横坐标（画布位置）
+	PosY      *float64       `json:"y" gorm:"column:pos_y;type:DOUBLE;default:NULL;comment:节点纵坐标（画布位置）"`                                // 节点纵坐标（画布位置）
 	Type      NodeType       `json:"type" gorm:"column:type;type:VARCHAR(32);not null;default:;comment:节点类型：Virtual/SQL/Collect/Sync"`  // 节点类型：Virtual/SQL/Collect/Sync
 	Status    NodeStatus     `json:"status" gorm:"column:status;type:VARCHAR(32);not null;default:;comment:节点状态：Normal/DryRun/StopRun"` // 节点状态：Normal/DryRun/StopRun
 	Deleted   int32          `json:"deleted" gorm:"column:deleted;type:TINYINT(1);not null;default:0;comment:逻辑删除标识：0-未删除，1-已删除"`       // 逻辑删除标识：0-未删除，1-已删除
@@ -130,6 +130,7 @@ type NodeInstance struct {
 	// start_time / end_time 可空：实例在创建时尚未开始执行，结束时间更是要等执行完成才回填。
 	StartTime sql.NullTime   `gorm:"column:start_time;type:timestamp;comment:开始执行时间" json:"start_time"`
 	EndTime   sql.NullTime   `gorm:"column:end_time;type:timestamp;comment:执行结束时间" json:"end_time"`
+	RunStyle  string         `gorm:"column:run_style;type:varchar(32);default:Normal;comment:运行方式;NOT NULL" json:"run_style"`
 	Status    string         `gorm:"column:status;type:varchar(32);default:NotReady;comment:状态;NOT NULL" json:"status"`
 	BatchId   string         `gorm:"column:batch_id;type:varchar(32);comment:批次ID;NOT NULL" json:"batch_id"`
 	CreatedOn sql.NullTime   `gorm:"column:created_on;type:datetime;comment:创建时间" json:"created_on"`

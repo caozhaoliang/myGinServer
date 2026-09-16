@@ -69,6 +69,7 @@ CREATE TABLE IF NOT EXISTS `node_instance` (
     `execute_time` timestamp NOT NULL COMMENT '预期执行时间',
     `start_time` timestamp NULL DEFAULT NULL COMMENT '开始执行时间，实例创建时为 NULL',
     `end_time` timestamp NULL DEFAULT NULL COMMENT '执行结束时间，未结束时为 NULL',
+    `run_style` VARCHAR(32) NOT NULL DEFAULT 'Normal' COMMENT '运行方式',
     `status`    VARCHAR(32) NOT NULL DEFAULT 'NotReady' COMMENT '状态',
     `batch_id`  VARCHAR(32)  NOT NULL COMMENT '批次ID',
     `created_on` DATETIME DEFAULT NULL COMMENT '创建时间',
