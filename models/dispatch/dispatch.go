@@ -94,6 +94,7 @@ type ExecQueue struct {
 	Response  string         `gorm:"column:response;type:mediumtext;comment:响应内容" json:"response"`
 	CreatedOn sql.NullTime   `gorm:"column:created_on;type:datetime;comment:创建时间" json:"created_on"`
 	CreatedBy sql.NullString `gorm:"column:created_by;type:varchar(64);comment:创建人ID" json:"created_by"`
+	TenantDb  string         `gorm:"column:tenant_db;type:varchar(64);default:;comment:所属租户库名" json:"tenant_db"`
 }
 
 func EntityFinished(status string) bool {

@@ -216,12 +216,8 @@ func (s *DispatchController) MetaColumns(c *gin.Context) {
 	SendSuccess(c, tables)
 }
 
-const (
-	OdsDatasourceId = "615966d0-af61-11f1-8f44-866b84548888"
-)
-
 func (s *DispatchController) OdsTables(c *gin.Context) {
-	tables, err := s.nodeServer.MetaTables(c, OdsDatasourceId)
+	tables, err := s.nodeServer.OdsTables(c)
 	if err != nil {
 		SendError(c, http.StatusInternalServerError, errors.Wrap(err, ""))
 		return
@@ -237,7 +233,7 @@ func (s *DispatchController) OdsColumns(c *gin.Context) {
 		SendError(c, http.StatusBadRequest, errors.Wrap(err, "获取参数失败"))
 		return
 	}
-	tables, err := s.nodeServer.MetaColumns(c, OdsDatasourceId, req.Table)
+	tables, err := s.nodeServer.OdsColumns(c, req.Table)
 	if err != nil {
 		SendError(c, http.StatusInternalServerError, errors.Wrap(err, ""))
 		return

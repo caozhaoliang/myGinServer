@@ -8,6 +8,7 @@ import (
 	"myGinServer/api/request"
 	"myGinServer/api/response"
 	mdispatch "myGinServer/models/dispatch"
+	"myGinServer/pkg/tenantctx"
 	"time"
 
 	"github.com/go-sql-driver/mysql"
@@ -15,21 +16,21 @@ import (
 )
 
 func (n *NodeServer) SaveDatasource(ctx context.Context, req request.DatasourceReq) error {
-	err := n.store.SaveDatasource(ctx, "", mdispatch.Datasource{
+	err := n.store.SaveDatasource(ctx, tenantctx.TenantDB(ctx), mdispatch.Datasource{
 		Id:        req.Id,
 		Code:      req.Code,
 		Name:      req.Name,
 		Type:      req.Type,
 		ConnStr:   req.ConnStr,
 		CreatedOn: sql.NullTime{Time: time.Now(), Valid: true},
-		CreatedBy: sql.NullString{String: "admin", Valid: true},
+		CreatedBy: sql.NullString{String: tenantctx.UserID(ctx), Valid: true},
 	})
 
 	return err
 }
 
 func (n *NodeServer) ListDatasource(ctx context.Context) ([]request.DatasourceReq, error) {
-	datasource, err := n.store.ListDatasource(ctx, "")
+	datasource, err := n.store.ListDatasource(ctx, tenantctx.TenantDB(ctx))
 	if err != nil {
 		return nil, err
 	}
@@ -40,16 +41,41 @@ func (n *NodeServer) ListDatasource(ctx context.Context) ([]request.DatasourceRe
 			Code:    ds.Code,
 			Name:    ds.Name,
 			Type:    ds.Type,
-			ConnStr: ds.ConnStr,
+			ConnStr: maskConnStr(ds.ConnStr),
 		})
 	}
 	return res, nil
 }
 
-// MetaTables 根据数据源 ID 获取该数据源下所有表的列表
+// maskConnStr 对数据源连接串做脱敏：把密码字段替换为 ***，避免明文返回给前端。
+func maskConnStr(raw string) string {
+	var content mdispatch.MysqlDatasourceContent
+	if err := json.Unmarshal([]byte(raw), &content); err != nil {
+		return raw // 非 JSON 或解析失败时原样返回
+	}
+	if content.Passwd != "" {
+		content.Passwd = "***"
+	}
+	b, err := json.Marshal(content)
+	if err != nil {
+		return raw
+	}
+	return string(b)
+}
+
+// MetaTables 根据数据源 ID 获取该数据源（租户库内）下所有表的列表。
 func (n *NodeServer) MetaTables(ctx context.Context, dsId string) ([]response.MetaTables, error) {
-	// 根据数据源 ID 获取数据源连接信息
-	content, err := n.getDatasourceContent(ctx, dsId)
+	return n.metaTables(ctx, tenantctx.TenantDB(ctx), dsId)
+}
+
+// OdsTables 获取 ODS 全局公共数据源下所有表的列表（公共库，不走租户库）。
+func (n *NodeServer) OdsTables(ctx context.Context) ([]response.MetaTables, error) {
+	return n.metaTables(ctx, "", OdsDatasourceId)
+}
+
+// metaTables 查询指定库内指定数据源下的表列表。
+func (n *NodeServer) metaTables(ctx context.Context, project, dsId string) ([]response.MetaTables, error) {
+	content, err := n.getDatasourceContent(ctx, project, dsId)
 	if err != nil {
 		return nil, err
 	}
@@ -84,10 +110,19 @@ func (n *NodeServer) MetaTables(ctx context.Context, dsId string) ([]response.Me
 	return tables, nil
 }
 
-// MetaColumns 根据数据源 ID 与表名获取该表下的所有列信息
+// MetaColumns 根据数据源 ID 与表名获取该表（租户库内）下的所有列信息。
 func (n *NodeServer) MetaColumns(ctx context.Context, dsId, table string) ([]response.MetaColumns, error) {
-	// 根据数据源 ID 获取数据源连接信息
-	content, err := n.getDatasourceContent(ctx, dsId)
+	return n.metaColumns(ctx, tenantctx.TenantDB(ctx), dsId, table)
+}
+
+// OdsColumns 获取 ODS 全局公共数据源下指定表的所有列信息（公共库，不走租户库）。
+func (n *NodeServer) OdsColumns(ctx context.Context, table string) ([]response.MetaColumns, error) {
+	return n.metaColumns(ctx, "", OdsDatasourceId, table)
+}
+
+// metaColumns 查询指定库内指定数据源下指定表的所有列信息。
+func (n *NodeServer) metaColumns(ctx context.Context, project, dsId, table string) ([]response.MetaColumns, error) {
+	content, err := n.getDatasourceContent(ctx, project, dsId)
 	if err != nil {
 		return nil, err
 	}
@@ -130,9 +165,9 @@ func (n *NodeServer) MetaColumns(ctx context.Context, dsId, table string) ([]res
 	return columns, nil
 }
 
-// getDatasourceContent 根据数据源 ID 获取并解析连接信息，目前仅支持 mysql 类型
-func (n *NodeServer) getDatasourceContent(ctx context.Context, dsId string) (*mdispatch.MysqlDatasourceContent, error) {
-	ds, err := n.store.GetDatasource(ctx, "", dsId)
+// getDatasourceContent 根据数据源 ID 获取并解析连接信息，目前仅支持 mysql 类型。
+func (n *NodeServer) getDatasourceContent(ctx context.Context, project, dsId string) (*mdispatch.MysqlDatasourceContent, error) {
+	ds, err := n.store.GetDatasource(ctx, project, dsId)
 	if err != nil {
 		return nil, errors.Wrapf(err, "获取数据源失败: %s", dsId)
 	}

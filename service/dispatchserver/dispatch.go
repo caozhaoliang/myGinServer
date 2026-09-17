@@ -29,15 +29,16 @@ func init() {
 }
 
 type TestRunEntity struct {
-	Sql   string
-	RunId string
+	Sql      string
+	RunId    string
+	TenantDb string
 }
 
 // SendEntity 把一次测试运行投递到内存队列。
 // 队列满时立即返回错误，而不是把调用方挂住：ch 容量为 100，且消费端
 // （Dispatch 内的单 goroutine）是串行执行 SQL 的，一旦积压，阻塞在这里的
 // HTTP 请求既等不到槽位释放，也无法随客户端断开而取消。
-func (n *NodeServer) SendEntity(ctx context.Context, runId, sql string) error {
+func (n *NodeServer) SendEntity(ctx context.Context, tenantDb, runId, sql string) error {
 	// 先剔除已取消的请求：否则当 ctx 已取消而 channel 恰有空位时，
 	// select 会在「发送」与「ctx.Done()」之间随机选一个，导致已取消的请求仍被投递。
 	if err := ctx.Err(); err != nil {
@@ -45,8 +46,9 @@ func (n *NodeServer) SendEntity(ctx context.Context, runId, sql string) error {
 	}
 	select {
 	case ch <- TestRunEntity{
-		Sql:   sql,
-		RunId: runId,
+		Sql:      sql,
+		RunId:    runId,
+		TenantDb: tenantDb,
 	}:
 		return nil
 	case <-ctx.Done():
@@ -103,7 +105,7 @@ func normalizeValue(v interface{}) interface{} {
 }
 
 func (n *NodeServer) runSQL(ctx context.Context, entity TestRunEntity) {
-	queue, errQuery := n.store.QueryExecQueue(ctx, "", entity.RunId)
+	queue, errQuery := n.store.QueryExecQueue(ctx, entity.TenantDb, entity.RunId)
 	if errQuery != nil {
 		return
 	}
@@ -113,9 +115,9 @@ func (n *NodeServer) runSQL(ctx context.Context, entity TestRunEntity) {
 		mu.Unlock()
 		return
 	}
-	_ = n.store.UpdateExecQueueResp(ctx, "", entity.RunId, "{}", "running")
+	_ = n.store.UpdateExecQueueResp(ctx, entity.TenantDb, entity.RunId, "{}", "running")
 	mu.Unlock()
-	content, err := n.getDatasourceContent(ctx, OdsDatasourceId)
+	content, err := n.getDatasourceContent(ctx, "", OdsDatasourceId)
 	if err != nil {
 		return
 	}
@@ -176,7 +178,7 @@ func (n *NodeServer) runSQL(ctx context.Context, entity TestRunEntity) {
 		status = "failed"
 	}
 	bytes, _ := json.Marshal(resp)
-	err = n.store.UpdateExecQueueResp(ctx, "", entity.RunId, string(bytes), status)
+	err = n.store.UpdateExecQueueResp(ctx, entity.TenantDb, entity.RunId, string(bytes), status)
 	if err != nil {
 		fmt.Println(err.Error())
 	}

@@ -99,6 +99,9 @@ func NewRouter(controller *controller.UserController,
 	api := r.Group("/api", jwtMiddleware.Middleware.MiddlewareFunc())
 	{
 		api.GET("/user/profile", controller.Profile)
+		api.PUT("/user/profile", controller.UpdateProfile)
+		api.POST("/user/password", controller.ChangePassword)
+		api.GET("/tenant/list", controller.TenantList)
 		api.GET("/task/list", controller.Tasks)
 		api.DELETE("/task/del/:id", controller.DelTask)
 		api.POST("/task/add", controller.SaveTask)
@@ -110,6 +113,15 @@ func NewRouter(controller *controller.UserController,
 		api.POST("/article/update", controller.UpdateArticle)
 		api.GET("/article/:id", controller.GetArticle)
 	}
+	// 用户管理接口（管理员权限）
+	adminApi := r.Group("/api/user", jwtMiddleware.Middleware.MiddlewareFunc(), tool.RequireAdmin(db))
+	{
+		adminApi.GET("/list", controller.UserList)
+		adminApi.POST("", controller.CreateUser)
+		adminApi.PUT("/:id", controller.UpdateUser)
+		adminApi.DELETE("/:id", controller.DisableUser)
+		adminApi.POST("/:id/password", controller.ResetUserPassword)
+	}
 	apiObject := r.Group("/api/object", jwtMiddleware.Middleware.MiddlewareFunc())
 	{
 		apiObject.PUT("/presigned-upload-url", controller.PresignedUpload)
@@ -119,7 +131,7 @@ func NewRouter(controller *controller.UserController,
 	//	chatApi.GET("/sendMsg", chatController.SendMsg)
 	//	chatApi.GET("/sendUserMsg", chatController.SendUserMsg)
 	//}
-	dispatchApi := r.Group("/api/dispatch")
+	dispatchApi := r.Group("/api/dispatch", jwtMiddleware.Middleware.MiddlewareFunc(), tool.TenantMiddleware(db))
 	{
 		dispatchApi.POST("/node", dispatch.SaveNode)
 		dispatchApi.POST("/line", dispatch.SavaLine)
@@ -129,14 +141,18 @@ func NewRouter(controller *controller.UserController,
 		dispatchApi.POST("/test_run", dispatch.TestRun)
 		dispatchApi.GET("/query_result", dispatch.QueryResult)
 	}
-	dsApi := r.Group("/api/datasource")
+	dsApi := r.Group("/api/datasource", jwtMiddleware.Middleware.MiddlewareFunc(), tool.TenantMiddleware(db))
 	{
 		dsApi.GET("/list", dispatch.ListDatasource)
 		dsApi.POST("/save", dispatch.SaveDatasource)
 		dsApi.GET("/tables", dispatch.MetaTables)
 		dsApi.GET("/columns", dispatch.MetaColumns)
-		dsApi.GET("/ods/tables", dispatch.OdsTables)
-		dsApi.GET("/ods/columns", dispatch.OdsColumns)
+	}
+	// ODS 全局公共数据源：仅需登录，不挂租户中间件，读公共库
+	dsOdsApi := r.Group("/api/datasource/ods", jwtMiddleware.Middleware.MiddlewareFunc())
+	{
+		dsOdsApi.GET("/tables", dispatch.OdsTables)
+		dsOdsApi.GET("/columns", dispatch.OdsColumns)
 	}
 	route.r = r
 	return route
