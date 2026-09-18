@@ -46,7 +46,7 @@ func Cors() gin.HandlerFunc {
 		// 允许所有来源（生产环境建议指定具体域名）
 		c.Header("Access-Control-Allow-Origin", "*")
 		// 允许的请求头
-		c.Header("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+		c.Header("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With, X-Tenant-Id")
 		// 允许的请求方法
 		c.Header("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, PATCH, DELETE")
 		// 允许前端获取的头信息
@@ -66,6 +66,7 @@ func Cors() gin.HandlerFunc {
 func NewRouter(controller *controller.UserController,
 	// chatController *controller.ChatController,
 	dispatch *controller.DispatchController,
+	migrateCtl *controller.MigrateController,
 	metricsCollector *metrics.Metrics,
 	db store.DBStore) *Router {
 
@@ -153,6 +154,13 @@ func NewRouter(controller *controller.UserController,
 	{
 		dsOdsApi.GET("/tables", dispatch.OdsTables)
 		dsOdsApi.GET("/columns", dispatch.OdsColumns)
+	}
+	// 数据迁移（类 DataX，MySQL → MySQL）：源/目标连接由请求自带，仅需登录
+	migrateApi := r.Group("/api/migrate", jwtMiddleware.Middleware.MiddlewareFunc())
+	{
+		migrateApi.POST("/run", migrateCtl.Run)
+		migrateApi.GET("/status", migrateCtl.Status)
+		migrateApi.POST("/stop", migrateCtl.Stop)
 	}
 	route.r = r
 	return route

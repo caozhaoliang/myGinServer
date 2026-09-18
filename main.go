@@ -32,11 +32,13 @@ func main() {
 	defer cancel()
 	// chatController := controller.NewChatController(configYaml)
 	dispatch := controller.NewDispatchController(ctx, configYaml)
+	migrateCtl := controller.NewMigrateController()
 	metricsCollector := metrics.NewMetrics()
 
 	r := router.NewRouter(userController,
 		// chatController,
 		dispatch,
+		migrateCtl,
 		metricsCollector, db)
 
 	if prometheusMonitor {
