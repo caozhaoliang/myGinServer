@@ -5,12 +5,16 @@ package tenantctx
 
 import "context"
 
-// ctxKey 使用私有结构体作为 context key，避免与其它包的 string key 冲突。
-type ctxKey struct{}
+// ctxKey 使用私有类型作为 context key，避免与其它包的 key 冲突。
+// 注意：不能用空结构体（type ctxKey struct{}）——Go 中所有空结构体字面量
+// 都是同一个零值、相互相等，两个「不同的」ctxKey{} 实例会命中同一个 context key，
+// 导致 TenantDB 与 UserID 互相覆盖（实测：WithUserID 会覆盖 WithTenantDB 写入的值）。
+type tenantDBKeyType int
+type userIDKeyType int
 
 var (
-	tenantDBKey = ctxKey{}
-	userIDKey   = ctxKey{}
+	tenantDBKey tenantDBKeyType
+	userIDKey   userIDKeyType
 )
 
 // WithTenantDB 在 ctx 中写入租户对应的数据库名，返回新的 context。

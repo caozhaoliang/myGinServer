@@ -60,7 +60,9 @@ func TestParser_RootNodeMidnight(t *testing.T) {
 }
 
 // TestParser_EmptyScheduleWindow 校验「窗口内合法为空」时不再 panic，而是返回 ok=false。
-// 0 0 * * 1 表示每周一零点；2026-09-16 是周三，其所在窗口内没有周一。
+// TestParser_EmptyScheduleWindow 校验「窗口内合法为空」时不再 panic，而是生成一条空跑（DryRun）实例
+// （c9d5944 引入的设计：无合法触发时也保留实例，供调度链路走空跑状态）。
+// 0 0 * * 1 表示每周一零点；2026-09-15 作为业务日期解析出的窗口（09-16 周三）内没有周一。
 func TestParser_EmptyScheduleWindow(t *testing.T) {
 	const nodeID = "monday-node"
 
@@ -81,10 +83,17 @@ func TestParser_EmptyScheduleWindow(t *testing.T) {
 		t.Fatalf("Parser 返回错误: %v", err)
 	}
 
-	if n := len(dag.Nodes[nodeID].Data.instances); n != 0 {
-		t.Fatalf("窗口内无周一，期望 0 个实例，实际 %d 个", n)
+	instances := dag.Nodes[nodeID].Data.instances
+	if n := len(instances); n != 1 {
+		t.Fatalf("窗口内无周一，期望生成 1 条空跑实例，实际 %d 个", n)
 	}
-	if _, ok := dag.GetInstanceById(nodeID); ok {
-		t.Fatal("无实例时 GetInstanceById 应返回 ok=false")
+	if got := instances[0].RunStyle; got != string(dispatch.DryRun) {
+		t.Fatalf("空跑实例 RunStyle 应为 DryRun，实际 %q", got)
+	}
+	if got := instances[0].Status; got != string(dispatch.InstanceStatusNotReady) {
+		t.Fatalf("空跑实例 Status 应为 NotReady，实际 %q", got)
+	}
+	if _, ok := dag.GetInstanceById(nodeID); !ok {
+		t.Fatal("存在空跑实例时 GetInstanceById 应返回 ok=true")
 	}
 }

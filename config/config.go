@@ -38,6 +38,20 @@ type Config struct {
 	DBConfig     DBConfig           `yaml:"db"`
 	ObjectConfig ObjectServerConfig `yaml:"object"`
 	Cache        CacheConfig        `yaml:"cache"`
+	SSH          SSHConfig          `yaml:"ssh"`
+}
+
+// SSHConfig 远程执行（shell 节点）的 SSH 连接配置。
+// 认证方式二选一：password 或 rsa_private_key_path / rsa_private_key（内联 PEM）。
+type SSHConfig struct {
+	Host              string `yaml:"host"`                // 形如 127.0.0.1:22
+	User              string `yaml:"user"`                // 登录用户
+	Password          string `yaml:"password"`            // 密码认证（可选）
+	RsaPrivateKeyPath string `yaml:"rsa_private_key_path"` // 私钥文件路径（与内联私钥二选一）
+	RsaPrivateKey     string `yaml:"rsa_private_key"`     // 内联 PEM 私钥（与私钥路径二选一）
+	Passphrase        string `yaml:"passphrase"`          // 私钥口令（无口令时留空）
+	ShellType         string `yaml:"shell_type"`          // 远程解释器：sh / bash（默认 bash）
+	TimeoutSeconds    int    `yaml:"timeout_seconds"`     // 连接超时秒数（默认 5）
 }
 
 type DBConfig struct {

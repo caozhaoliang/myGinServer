@@ -255,9 +255,9 @@ func (n *NodeDAG) GetInstanceList() []dispatch.NodeInstance {
 	return nodeInstances
 }
 
-// GetInstanceById 取节点的首个实例。第二个返回值为 false 表示节点不存在，
-// 或其 cron 表达式在本批次窗口内合法地没有产生任何实例（如 0 0 * * 1 落在非周一），
-// 调用方必须显式处理，不能拿着零值继续往下走。
+// GetInstanceById 取节点的首个实例。第二个返回值为 false 表示节点不存在。
+// 注意：cron 表达式在本批次窗口内合法地没有产生任何触发时，CreateInstance 会
+// 生成一条空跑（DryRun）实例，因此只要节点存在，本方法通常返回 ok=true。
 func (n *NodeDAG) GetInstanceById(id string) (dispatch.NodeInstance, bool) {
 	node, ok := n.Nodes[id]
 	if !ok || len(node.Data.instances) == 0 {

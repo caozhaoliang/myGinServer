@@ -19,3 +19,13 @@ cache:
   password: '123456'
   pool_size: 10
   db: 0
+
+# shell 节点远程执行使用的 SSH 连接（本机联调示例：key 认证）
+ssh:
+  host: 127.0.0.1:22
+  user: blues
+  password: ''
+  rsa_private_key_path: /Users/blues/.ssh/id_rsa
+  passphrase: ''
+  shell_type: bash
+  timeout_seconds: 5

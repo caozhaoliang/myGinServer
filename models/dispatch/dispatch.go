@@ -17,6 +17,7 @@ var (
 	NodeSQL     NodeType = "SQL"
 	NodeCollect NodeType = "Collect"
 	NodeSync    NodeType = "Sync"
+	NodeShell   NodeType = "Shell"
 
 	NormalStatus NodeStatus = "Normal"
 	DryRun       NodeStatus = "DryRun"

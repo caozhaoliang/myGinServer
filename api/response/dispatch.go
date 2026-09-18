@@ -26,4 +26,6 @@ type TestRunResp struct {
 	Sql    string                   `json:"sql"`
 	Header []string                 `json:"header"`
 	Body   []map[string]interface{} `json:"body"`
+	// Output：shell 节点执行的标准输出 + 标准错误（SQL 场景为空）
+	Output string `json:"output"`
 }

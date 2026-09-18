@@ -13,6 +13,7 @@ import (
 	mdispatch "myGinServer/models/dispatch"
 	"myGinServer/pkg/tenantctx"
 	"myGinServer/utils"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -142,11 +143,20 @@ func (n *NodeServer) TestRun(ctx context.Context, req request.TestRunSqlReq) err
 	if err != nil {
 		return errors.Wrapf(err, "参数替换失败")
 	}
+	// 按 type 区分执行类型：shell 节点走 SSH 远程执行，其余按 SQL 处理。
+	kind := "sql"
+	if strings.EqualFold(req.Type, "Shell") {
+		kind = "shell"
+	}
+	content := fmt.Sprintf("{\"sql\":\"%s\"}", template)
+	if kind == "shell" {
+		content = fmt.Sprintf("{\"shell\":\"%s\"}", template)
+	}
 	err = n.store.SaveExecQueue(ctx, tenantctx.TenantDB(ctx), mdispatch.ExecQueue{
 		Id:        uuid.New().String(),
 		RunId:     req.RunId,
 		Status:    string(mdispatch.Pending),
-		Content:   fmt.Sprintf("{\"sql\":\"%s\"}", template),
+		Content:   content,
 		Response:  "{}",
 		CreatedOn: sql.NullTime{time.Now(), true},
 		CreatedBy: sql.NullString{tenantctx.UserID(ctx), true},
@@ -155,7 +165,7 @@ func (n *NodeServer) TestRun(ctx context.Context, req request.TestRunSqlReq) err
 	if err != nil {
 		return err
 	}
-	err = n.SendEntity(ctx, tenantctx.TenantDB(ctx), req.RunId, template)
+	err = n.SendEntity(ctx, tenantctx.TenantDB(ctx), req.RunId, kind, template)
 	if err != nil {
 		// 补偿：上面已向 exec_queue 落了一条 pending 记录，但消息没能进入内存队列，
 		// 它永远不会被执行，前端轮询 QueryResult 会一直拿到空对象、无法终止。

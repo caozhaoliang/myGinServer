@@ -35,7 +35,7 @@ func TestSendEntity_QueueFullReturnsError(t *testing.T) {
 	n := &NodeServer{}
 
 	for i := 0; i < cap(ch); i++ {
-		if err := n.SendEntity(context.Background(), "", "run-fill", "select 1"); err != nil {
+		if err := n.SendEntity(context.Background(), "", "run-fill", "sql", "select 1"); err != nil {
 			t.Fatalf("填充第 %d 条时不应失败: %v", i, err)
 		}
 	}
@@ -43,7 +43,7 @@ func TestSendEntity_QueueFullReturnsError(t *testing.T) {
 	// 用超时保护：若实现退化成阻塞发送，这里会超时失败，而不是一直挂住整个测试进程。
 	done := make(chan error, 1)
 	go func() {
-		done <- n.SendEntity(context.Background(), "", "run-overflow", "select 1")
+		done <- n.SendEntity(context.Background(), "", "run-overflow", "sql", "select 1")
 	}()
 	select {
 	case err := <-done:
@@ -71,7 +71,7 @@ func TestSendEntity_CancelledContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	if err := n.SendEntity(ctx, "", "run-cancel", "select 1"); err != context.Canceled {
+	if err := n.SendEntity(ctx, "", "run-cancel", "sql", "select 1"); err != context.Canceled {
 		t.Fatalf("期望返回 context.Canceled，实际为: %v", err)
 	}
 	if len(ch) != 0 {
@@ -85,7 +85,7 @@ func TestSendEntity_OK(t *testing.T) {
 	defer drainCh()
 	n := &NodeServer{}
 
-	if err := n.SendEntity(context.Background(), "", "run-ok", "select 1"); err != nil {
+	if err := n.SendEntity(context.Background(), "", "run-ok", "sql", "select 1"); err != nil {
 		t.Fatalf("正常投递不应失败: %v", err)
 	}
 	if len(ch) != 1 {

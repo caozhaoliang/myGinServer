@@ -29,3 +29,8 @@ type CollectNodeContent struct {
 	Source CollectSource `json:"source"`
 	Target CollectTarget `json:"target"`
 }
+
+// ShellNodeContent 节点 content：包含一段在远程主机上执行的 shell 文本。
+type ShellNodeContent struct {
+	Shell string `json:"shell"`
+}

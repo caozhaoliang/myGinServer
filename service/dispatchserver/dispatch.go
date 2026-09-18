@@ -29,16 +29,18 @@ func init() {
 }
 
 type TestRunEntity struct {
+	Kind     string // 执行类型：sql / shell（空值按 sql 处理）
 	Sql      string
 	RunId    string
 	TenantDb string
 }
 
 // SendEntity 把一次测试运行投递到内存队列。
+// kind 为执行类型（sql/shell），content 为已渲染的 SQL 文本或 shell 脚本。
 // 队列满时立即返回错误，而不是把调用方挂住：ch 容量为 100，且消费端
-// （Dispatch 内的单 goroutine）是串行执行 SQL 的，一旦积压，阻塞在这里的
+// （Dispatch 内的单 goroutine）是串行执行任务的，一旦积压，阻塞在这里的
 // HTTP 请求既等不到槽位释放，也无法随客户端断开而取消。
-func (n *NodeServer) SendEntity(ctx context.Context, tenantDb, runId, sql string) error {
+func (n *NodeServer) SendEntity(ctx context.Context, tenantDb, runId, kind, content string) error {
 	// 先剔除已取消的请求：否则当 ctx 已取消而 channel 恰有空位时，
 	// select 会在「发送」与「ctx.Done()」之间随机选一个，导致已取消的请求仍被投递。
 	if err := ctx.Err(); err != nil {
@@ -46,7 +48,8 @@ func (n *NodeServer) SendEntity(ctx context.Context, tenantDb, runId, sql string
 	}
 	select {
 	case ch <- TestRunEntity{
-		Sql:      sql,
+		Kind:     kind,
+		Sql:      content,
 		RunId:    runId,
 		TenantDb: tenantDb,
 	}:
@@ -88,7 +91,11 @@ func (n *NodeServer) Dispatch(ctx context.Context) {
 				if !ok {
 					return
 				}
-				n.runSQL(ctx, entity)
+				if entity.Kind == "shell" {
+					n.runShell(ctx, entity)
+				} else {
+					n.runSQL(ctx, entity)
+				}
 			}
 		}
 	}()

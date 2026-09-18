@@ -61,7 +61,7 @@ func (s *DispatchController) SaveNode(c *gin.Context) {
 		})
 		return
 	}
-	err := s.nodeServer.SaveNode(c, &req)
+	err := s.nodeServer.SaveNode(c.Request.Context(), &req)
 	if err != nil {
 		SendError(c, 500, err)
 		return
@@ -75,7 +75,7 @@ func (s *DispatchController) SavaLine(c *gin.Context) {
 		SendError(c, http.StatusBadRequest, errors.New("无效的请求参数"))
 		return
 	}
-	err := s.nodeServer.SaveLine(c, &req)
+	err := s.nodeServer.SaveLine(c.Request.Context(), &req)
 	if err != nil {
 		SendError(c, http.StatusInternalServerError, err)
 	} else {
@@ -92,7 +92,7 @@ func (s *DispatchController) DeleteLine(c *gin.Context) {
 		SendError(c, http.StatusBadRequest, err)
 		return
 	}
-	err := s.nodeServer.DeleteLine(c, req.Id)
+	err := s.nodeServer.DeleteLine(c.Request.Context(), req.Id)
 	if err != nil {
 		SendError(c, http.StatusInternalServerError, err)
 		return
@@ -109,7 +109,7 @@ func (s *DispatchController) DeleteNode(c *gin.Context) {
 		SendError(c, http.StatusBadRequest, err)
 		return
 	}
-	err := s.nodeServer.DeleteNode(c, req.Id)
+	err := s.nodeServer.DeleteNode(c.Request.Context(), req.Id)
 	if err != nil {
 		SendError(c, http.StatusInternalServerError, err)
 		return
@@ -119,7 +119,7 @@ func (s *DispatchController) DeleteNode(c *gin.Context) {
 
 func (s *DispatchController) Graph(c *gin.Context) {
 
-	r, err := s.nodeServer.Graph(c)
+	r, err := s.nodeServer.Graph(c.Request.Context())
 	if err != nil {
 		SendError(c, http.StatusInternalServerError, err)
 		return
@@ -132,7 +132,7 @@ func (s *DispatchController) TestRun(c *gin.Context) {
 		SendError(c, http.StatusBadRequest, err)
 		return
 	}
-	err := s.nodeServer.TestRun(c, req)
+	err := s.nodeServer.TestRun(c.Request.Context(), req)
 	if err != nil {
 		SendError(c, http.StatusInternalServerError, errors.Wrap(err, "测试运行失败"))
 		return
@@ -149,7 +149,7 @@ func (s *DispatchController) QueryResult(c *gin.Context) {
 		SendError(c, http.StatusBadRequest, err)
 		return
 	}
-	r, err := s.nodeServer.QueryTestResult(c, req.RunId)
+	r, err := s.nodeServer.QueryTestResult(c.Request.Context(), req.RunId)
 	if err != nil {
 		SendError(c, http.StatusInternalServerError, errors.Wrap(err, "运行结果获取失败"))
 		return
@@ -165,7 +165,7 @@ func (s *DispatchController) SaveDatasource(c *gin.Context) {
 		SendError(c, http.StatusBadRequest, errors.New("获取请求参数失败"))
 		return
 	}
-	err := s.nodeServer.SaveDatasource(c, req)
+	err := s.nodeServer.SaveDatasource(c.Request.Context(), req)
 	if err != nil {
 		SendError(c, http.StatusInternalServerError, errors.Wrap(err, "保存数据源失败"))
 		return
@@ -174,7 +174,7 @@ func (s *DispatchController) SaveDatasource(c *gin.Context) {
 }
 
 func (s *DispatchController) ListDatasource(c *gin.Context) {
-	datasource, err := s.nodeServer.ListDatasource(c)
+	datasource, err := s.nodeServer.ListDatasource(c.Request.Context())
 	if err != nil {
 		SendError(c, http.StatusInternalServerError, errors.Wrap(err, "获取数据源列表失败"))
 		return
@@ -191,7 +191,7 @@ func (s *DispatchController) MetaTables(c *gin.Context) {
 		SendError(c, http.StatusBadRequest, errors.Wrap(err, "获取数据源id失败"))
 		return
 	}
-	tables, err := s.nodeServer.MetaTables(c, req.DatasourceId)
+	tables, err := s.nodeServer.MetaTables(c.Request.Context(), req.DatasourceId)
 	if err != nil {
 		SendError(c, http.StatusInternalServerError, errors.Wrap(err, ""))
 		return
@@ -208,7 +208,7 @@ func (s *DispatchController) MetaColumns(c *gin.Context) {
 		SendError(c, http.StatusBadRequest, errors.Wrap(err, "获取数据源id失败"))
 		return
 	}
-	tables, err := s.nodeServer.MetaColumns(c, req.DatasourceId, req.Table)
+	tables, err := s.nodeServer.MetaColumns(c.Request.Context(), req.DatasourceId, req.Table)
 	if err != nil {
 		SendError(c, http.StatusInternalServerError, errors.Wrap(err, ""))
 		return
@@ -217,7 +217,7 @@ func (s *DispatchController) MetaColumns(c *gin.Context) {
 }
 
 func (s *DispatchController) OdsTables(c *gin.Context) {
-	tables, err := s.nodeServer.OdsTables(c)
+	tables, err := s.nodeServer.OdsTables(c.Request.Context())
 	if err != nil {
 		SendError(c, http.StatusInternalServerError, errors.Wrap(err, ""))
 		return
@@ -233,7 +233,7 @@ func (s *DispatchController) OdsColumns(c *gin.Context) {
 		SendError(c, http.StatusBadRequest, errors.Wrap(err, "获取参数失败"))
 		return
 	}
-	tables, err := s.nodeServer.OdsColumns(c, req.Table)
+	tables, err := s.nodeServer.OdsColumns(c.Request.Context(), req.Table)
 	if err != nil {
 		SendError(c, http.StatusInternalServerError, errors.Wrap(err, ""))
 		return

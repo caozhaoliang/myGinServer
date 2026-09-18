@@ -7,7 +7,7 @@ type NodeSaveReq struct {
 	Code     string `json:"code" binding:"required"`
 	Name     string `json:"name" binding:"required"`
 	Content  string `json:"content"`
-	Type     string `json:"type" binding:"required,oneof=Virtual SQL Collect Sync"`
+	Type     string `json:"type" binding:"required,oneof=Virtual SQL Collect Sync Shell"`
 	Schedule string `json:"schedule" binding:"required"`
 	// X/Y 为节点在画布上的坐标（可选）：新增节点时由前端传入，旧数据或缺省时为 null，前端退回网格布局
 	X *float64 `json:"x"`
@@ -33,7 +33,9 @@ type DatasourceReq struct {
 
 // ----测试运行 ----
 
-// TestRunSqlReq 测试运行请求体
+// TestRunSqlReq 测试运行请求体。
+// type=SQL（默认）时，sql 为 base64 编码的 SQL 文本；
+// type=Shell 时，sql 为 base64 编码的 shell 脚本，通过 SSH 在远程主机执行。
 type TestRunSqlReq struct {
 	RunId  string                 `json:"run_id" binding:"required"`
 	Sql    string                 `json:"sql" binding:"required"`
