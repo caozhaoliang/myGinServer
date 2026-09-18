@@ -47,6 +47,7 @@ type Config struct {
 	BatchSize            int
 	Mode                 string // insert / replace / upsert
 	CreateTableIfMissing bool
+	CreateDDL            string // 自定义建表 DDL（优先于源表 SHOW CREATE TABLE）
 	Channels             int
 }
 
@@ -446,6 +447,13 @@ func ensureTargetTable(ctx context.Context, src, tgt *sql.DB, cfg Config) error 
 		return err
 	}
 	if cnt > 0 {
+		return nil
+	}
+	// 自定义 DDL 优先：节点 content 里配置了 create_ddl（如收集目标建表语句）时直接使用
+	if cfg.CreateDDL != "" {
+		if _, err := tgt.ExecContext(ctx, cfg.CreateDDL); err != nil {
+			return errors.Wrap(err, "执行自定义建表 DDL 失败")
+		}
 		return nil
 	}
 	var tableName, ddl string

@@ -32,7 +32,7 @@ func main() {
 	defer cancel()
 	// chatController := controller.NewChatController(configYaml)
 	dispatch := controller.NewDispatchController(ctx, configYaml)
-	migrateCtl := controller.NewMigrateController()
+	migrateCtl := controller.NewMigrateController(dispatch.GetNodeServer())
 	metricsCollector := metrics.NewMetrics()
 
 	r := router.NewRouter(userController,

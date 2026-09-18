@@ -47,9 +47,14 @@ func NewDispatchController(ctx context.Context, config *config.Config) *Dispatch
 		panic(err)
 	}
 	consumer.StartWorkers(ctx, 4)
-	nodeServer := dispatchserver.NewNodeServer(iStore, producer)
+	nodeServer := dispatchserver.NewNodeServer(iStore, producer, config)
 	nodeServer.Dispatch(ctx)
 	return &DispatchController{nodeServer: nodeServer}
+}
+
+// GetNodeServer 暴露节点服务，供迁移等需要按节点解析配置的模块使用。
+func (s *DispatchController) GetNodeServer() *dispatchserver.NodeServer {
+	return s.nodeServer
 }
 
 func (s *DispatchController) SaveNode(c *gin.Context) {

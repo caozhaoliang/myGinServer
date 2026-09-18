@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"myGinServer/api/request"
 	"myGinServer/api/response"
+	"myGinServer/config"
 	"myGinServer/internal/store/delayqueue"
 	"myGinServer/internal/store/dispatch"
 	mdispatch "myGinServer/models/dispatch"
@@ -27,11 +28,12 @@ var (
 type NodeServer struct {
 	store    dispatch.StoreIface
 	producer *delayqueue.Producer
+	conf     *config.Config
 }
 
-func NewNodeServer(store dispatch.StoreIface, producer *delayqueue.Producer) *NodeServer {
+func NewNodeServer(store dispatch.StoreIface, producer *delayqueue.Producer, conf *config.Config) *NodeServer {
 
-	return &NodeServer{store: store, producer: producer}
+	return &NodeServer{store: store, producer: producer, conf: conf}
 }
 
 func (n *NodeServer) SaveNode(ctx context.Context, req *request.NodeSaveReq) error {
